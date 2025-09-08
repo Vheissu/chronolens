@@ -64,7 +64,7 @@
       </div>
 
       <template if.bind="modalOpen">
-        <div class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" click.trigger="closeModal()">
+        <div class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" click.trigger="closeModal()" portal>
           <div class="relative w-full max-w-5xl" click.trigger="noop($event)">
             <div class="relative w-full overflow-hidden rounded-xl checker ring-1 ring-black/20 cursor-col-resize"
                  pointerdown.trigger="onSliderStart($event)"
