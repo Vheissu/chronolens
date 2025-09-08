@@ -39,14 +39,15 @@
       <mdui-icon name="compare"></mdui-icon>
       Before / After
     </h3>
-    <template if.bind="originalUrl || resultUrl">
+    <!-- Compare mode: only when both images exist -->
+    <template if.bind="originalUrl && resultUrl">
       <div class="relative w-full max-w-full overflow-hidden rounded-xl checker ring-1 ring-black/5 cursor-col-resize select-none"
            pointerdown.trigger="onSliderStart($event)"
            pointermove.trigger="onSliderMove($event)"
            pointerup.trigger="onSliderEnd()"
            pointerleave.trigger="onSliderEnd()">
-        <img class="block w-full select-none" src.bind="originalUrl || ''" alt="Original"/>
-        <img class="absolute top-0 left-0 w-full h-auto select-none" src.bind="resultUrl || ''" alt="Result"
+        <img class="block w-full select-none" src.bind="originalUrl" alt="Original"/>
+        <img class="absolute top-0 left-0 w-full h-auto select-none" src.bind="resultUrl" alt="Result"
              style.bind="'clip-path: inset(0 ' + (100 - compare) + '% 0 0)'"/>
         <div class="absolute inset-y-0" style.bind="'left: ' + compare + '%'">
           <div class="-translate-x-1/2 w-0.5 h-full bg-white/80 shadow"></div>
@@ -70,8 +71,8 @@
                  pointermove.trigger="onSliderMove($event)"
                  pointerup.trigger="onSliderEnd()"
                  pointerleave.trigger="onSliderEnd()">
-              <img class="block w-full select-none" src.bind="originalUrl || ''" alt="Original large"/>
-              <img class="absolute top-0 left-0 w-full h-auto select-none" src.bind="resultUrl || ''" alt="Result large"
+              <img class="block w-full select-none" src.bind="originalUrl" alt="Original large"/>
+              <img class="absolute top-0 left-0 w-full h-auto select-none" src.bind="resultUrl" alt="Result large"
                    style.bind="'clip-path: inset(0 ' + (100 - compare) + '% 0 0)'"/>
               <div class="absolute inset-y-0" style.bind="'left: ' + compare + '%'">
                 <div class="-translate-x-1/2 w-0.5 h-full bg-white/80 shadow"></div>
@@ -91,6 +92,20 @@
           </div>
         </div>
       </template>
+    </template>
+
+    <!-- Single image fallback: show whichever exists to avoid collapsing height -->
+    <template if.bind="!originalUrl && resultUrl">
+      <img class="rounded-xl w-full ring-1 ring-black/5" src.bind="resultUrl" alt="Result"/>
+      <div class="flex gap-2">
+        <mdui-button variant="tonal" icon="download" click.trigger="downloadSelected()">Download</mdui-button>
+      </div>
+    </template>
+    <template if.bind="originalUrl && !resultUrl">
+      <img class="rounded-xl w-full ring-1 ring-black/5" src.bind="originalUrl" alt="Original"/>
+      <div class="flex gap-2">
+        <mdui-button variant="tonal" icon="download" click.trigger="downloadSelected()">Download</mdui-button>
+      </div>
     </template>
     <template if.bind="!originalUrl && !resultUrl">
       <div class="text-sm opacity-70">No images yet.</div>
