@@ -71,8 +71,10 @@ export class GalleryPage {
         let coverUrl: string | undefined;
         if (d.sceneId && d.coverEra && d.coverVariant) {
           try { coverUrl = await this.scenes.renderUrl(d.sceneId, d.coverEra, d.coverVariant); } catch { /* ignore */ }
-        } else if (d.coverRef) {
-          try { coverUrl = await this.scenes.urlFromGsUri(d.coverRef); } catch { /* ignore */ }
+        } else if (d.sceneId && d.coverRef) {
+          try { coverUrl = await this.scenes.urlFromGsUri(d.coverRef, d.sceneId); } catch { try { coverUrl = await this.scenes.originalUrl(d.sceneId); } catch { /* ignore */ } }
+        } else if (d.sceneId) {
+          try { coverUrl = await this.scenes.originalUrl(d.sceneId); } catch { /* ignore */ }
         }
         out.push({ sceneId: d.sceneId, publicId: d.publicId, coverUrl, createdAt, coverEra: d.coverEra, coverVariant: d.coverVariant });
       }
