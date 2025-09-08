@@ -78,58 +78,85 @@
       <mdui-icon name="image"></mdui-icon>
       Result
     </h3>
-    <template if.bind="resultImage">
-      <div class="relative w-full max-w-full overflow-hidden rounded-xl checker ring-1 ring-black/5 cursor-col-resize select-none"
+    <!-- Show compare container as soon as we have a source image.
+         Overlay the result only after it's decoded (afterReady). -->
+    <template if.bind="sourcePreview || resultImage">
+      <div class="relative w-full max-w-full overflow-hidden rounded-xl checker ring-1 ring-black/5 select-none"
+           style.bind="'aspect-ratio: ' + (sourceWidth && sourceHeight ? (sourceWidth + ' / ' + sourceHeight) : '4 / 3')"
            pointerdown.trigger="onSliderStart($event)"
            pointermove.trigger="onSliderMove($event)"
            pointerup.trigger="onSliderEnd()"
            pointerleave.trigger="onSliderEnd()">
         <!-- Base (original) keeps natural aspect ratio for container -->
-        <img class="block w-full select-none" src.bind="sourcePreview || ''" alt="Original"/>
-        <!-- After image overlaid and clipped to percentage -->
-        <img class="absolute top-0 left-0 w-full h-auto select-none"
+        <img class="block w-full h-auto select-none"
+             src.bind="sourcePreview || ''" alt="Original"
+             decoding="async" width.bind="sourceWidth" height.bind="sourceHeight"/>
+        <!-- After image overlaid and clipped to percentage; only reveal when ready -->
+        <img if.bind="resultImage"
+             class="absolute top-0 left-0 w-full h-auto select-none transition-opacity duration-200"
              src.bind="resultImage" alt="Result"
-             style.bind="'clip-path: inset(0 ' + (100 - compare) + '% 0 0)'"/>
-        <!-- Slider handle -->
+             decoding="async" width.bind="resultWidth" height.bind="resultHeight"
+             style.bind="'opacity: ' + (afterReady ? '1' : '0') + '; clip-path: inset(0 ' + (100 - compare) + '% 0 0)'"/>
+        <!-- Loading veil shown while result fetch/decoding is in progress -->
+        <div class="absolute inset-0 grid place-items-center bg-black/5 dark:bg-white/5"
+             if.bind="afterLoading && !afterReady">
+          <div class="flex items-center gap-2 text-xs opacity-80 bg-white/70 dark:bg-black/40 rounded px-3 py-1.5 ring-1 ring-black/10">
+            <mdui-circular-progress indeterminate></mdui-circular-progress>
+            Preparing after image…
+          </div>
+        </div>
+        <!-- Slider handle (disabled visual when after not ready) -->
         <div class="absolute inset-y-0" style.bind="'left: ' + compare + '%'">
-          <div class="-translate-x-1/2 w-0.5 h-full bg-white/80 shadow"></div>
-          <div class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white shadow ring-1 ring-black/10"></div>
+          <div class="-translate-x-1/2 w-0.5 h-full bg-white/80 shadow opacity-90"></div>
+          <div class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white shadow ring-1 ring-black/10"
+               style.bind="'opacity: ' + (afterReady ? '1' : '0.5')"></div>
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <input type="range" min="0" max="100" value.two-way="compare" />
+        <input type="range" min="0" max="100" value.two-way="compare" disabled.bind="!afterReady"/>
         <span class="text-xs opacity-70">${compare}%</span>
       </div>
       <div class="flex flex-wrap gap-2">
         <mdui-button variant="tonal" icon="autorenew" disabled.bind="busy || !sceneId" click.trigger="reroll()">Reroll</mdui-button>
-        <mdui-button variant="tonal" icon="zoom_in" click.trigger="openModal()">View larger</mdui-button>
-        <mdui-button variant="tonal" icon="download" click.trigger="downloadResult()">Download</mdui-button>
+        <mdui-button variant="tonal" icon="zoom_in" click.trigger="openModal()" disabled.bind="!afterReady">View larger</mdui-button>
+        <mdui-button variant="tonal" icon="download" click.trigger="downloadResult()" disabled.bind="!afterReady">Download</mdui-button>
       </div>
 
       <!-- Light modal for larger compare view -->
       <template if.bind="modalOpen">
         <div class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" click.trigger="closeModal()" portal>
           <div class="relative w-full max-w-5xl" click.trigger="noop($event)">
-            <div class="relative w-full overflow-hidden rounded-xl checker ring-1 ring-black/20 cursor-col-resize"
+            <div class="relative w-full overflow-hidden rounded-xl checker ring-1 ring-black/20 select-none"
+                 style.bind="'aspect-ratio: ' + (sourceWidth && sourceHeight ? (sourceWidth + ' / ' + sourceHeight) : '4 / 3')"
                  pointerdown.trigger="onSliderStart($event)"
                  pointermove.trigger="onSliderMove($event)"
                  pointerup.trigger="onSliderEnd()"
                  pointerleave.trigger="onSliderEnd()">
-              <img class="block w-full select-none" src.bind="sourcePreview || ''" alt="Original large"/>
-              <img class="absolute top-0 left-0 w-full h-auto select-none" src.bind="resultImage" alt="Result large"
-                   style.bind="'clip-path: inset(0 ' + (100 - compare) + '% 0 0)'"/>
+              <img class="block w-full h-auto select-none" src.bind="sourcePreview || ''" alt="Original large"
+                   decoding="async" width.bind="sourceWidth" height.bind="sourceHeight"/>
+              <img if.bind="resultImage" class="absolute top-0 left-0 w-full h-auto select-none transition-opacity duration-200"
+                   src.bind="resultImage" alt="Result large"
+                   decoding="async" width.bind="resultWidth" height.bind="resultHeight"
+                   style.bind="'opacity: ' + (afterReady ? '1' : '0') + '; clip-path: inset(0 ' + (100 - compare) + '% 0 0)'"/>
+              <div class="absolute inset-0 grid place-items-center bg-black/5 dark:bg-white/5" if.bind="afterLoading && !afterReady">
+                <div class="flex items-center gap-2 text-xs opacity-90 bg-black/40 text-white rounded px-3 py-1.5 ring-1 ring-white/20">
+                  <mdui-circular-progress indeterminate></mdui-circular-progress>
+                  Preparing after image…
+                </div>
+              </div>
               <div class="absolute inset-y-0" style.bind="'left: ' + compare + '%'">
                 <div class="-translate-x-1/2 w-0.5 h-full bg-white/80 shadow"></div>
-                <div class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white shadow ring-1 ring-black/10"></div>
+                <div class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white shadow ring-1 ring-black/10"
+                     style.bind="'opacity: ' + (afterReady ? '1' : '0.5')"></div>
               </div>
             </div>
             <div class="mt-3 flex items-center justify-between">
               <div class="flex items-center gap-2">
-                <input type="range" min="0" max="100" value.two-way="compare" />
+                <input type="range" min="0" max="100" value.two-way="compare" disabled.bind="!afterReady"/>
                 <span class="text-xs opacity-70">${compare}%</span>
               </div>
               <div class="flex gap-2">
-                <mdui-button variant="tonal" icon="download" click.trigger="downloadResult()">Download</mdui-button>
+                <mdui-button variant="tonal" icon="download" click.trigger="downloadResult()" disabled.bind="!afterReady">Download</mdui-button>
                 <mdui-button variant="filled" icon="close" click.trigger="closeModal()">Close</mdui-button>
               </div>
             </div>
@@ -137,7 +164,7 @@
         </div>
       </template>
     </template>
-    <template if.bind="!resultImage">
+    <template if.bind="!sourcePreview && !resultImage">
       <div class="text-sm opacity-70">No result yet</div>
     </template>
   </mdui-card>

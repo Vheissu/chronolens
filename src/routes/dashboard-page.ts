@@ -21,6 +21,8 @@ export class DashboardPage {
   // UI state
   sourceFile: File | null = null;
   sourcePreview: string | null = null;
+  sourceWidth: number | null = null;
+  sourceHeight: number | null = null;
   era: Era = '1920';
   variant: Variant = 'balanced';
   negatives = '';
@@ -28,6 +30,10 @@ export class DashboardPage {
   busy = false;
   sceneId: string | null = null;
   resultImage: string | null = null;
+  resultWidth: number | null = null;
+  resultHeight: number | null = null;
+  afterLoading = false; // network preload for the result image
+  afterReady = false;   // result image decoded and ready to show
   error: string | null = null;
   quota: QuotaInfo | null = null;
   compare = 50; // before/after slider percent
@@ -47,10 +53,17 @@ export class DashboardPage {
       if (!okType) { this.error = 'Unsupported file type. Use JPEG/PNG/WebP.'; this.sourceFile = null; this.sourcePreview = null; return; }
       if (!okSize) { this.error = 'File exceeds 5 MB limit.'; this.sourceFile = null; this.sourcePreview = null; return; }
       this.sourceFile = file;
-      this.sourcePreview = await this.toDataUrl(file);
+      const [preview, dims] = await Promise.all([
+        this.toDataUrl(file),
+        this.readImageSize(file),
+      ]);
+      this.sourcePreview = preview;
+      this.sourceWidth = dims.width || null;
+      this.sourceHeight = dims.height || null;
     } else {
       this.sourceFile = null;
       this.sourcePreview = null;
+      this.sourceWidth = this.sourceHeight = null;
     }
   }
 
@@ -59,6 +72,9 @@ export class DashboardPage {
     this.busy = true;
     this.error = null;
     this.resultImage = null;
+    this.resultWidth = this.resultHeight = null;
+    this.afterReady = false;
+    this.afterLoading = true;
     try {
       // Create a new scene if needed
       if (!this.sceneId) {
@@ -67,29 +83,42 @@ export class DashboardPage {
       // Upload original and attach metadata
       await this.scenes.uploadOriginal(this.sceneId, this.sourceFile);
       // Render selected era/variant
-      const { url } = await this.scenes.renderEra(this.sceneId, this.era, this.variant, this.negatives || undefined, this.stylePreset || undefined);
+      const { url, record } = await this.scenes.renderEra(this.sceneId, this.era, this.variant, this.negatives || undefined, this.stylePreset || undefined);
+      // capture dimensions if backend provided them
+      this.resultWidth = (record?.width as number | undefined) || null;
+      this.resultHeight = (record?.height as number | undefined) || null;
+      // Preload the image so the compare reveals only when ready
+      await this.preload(url);
       this.resultImage = url;
+      this.afterReady = true;
       await this.refreshQuota();
     } catch (e: unknown) {
       console.error(e);
       this.error = this.errMsg(e);
     } finally {
       this.busy = false;
+      this.afterLoading = false;
     }
   }
 
   async reroll(): Promise<void> {
     if (!this.sceneId) return;
     this.busy = true; this.error = null;
+    this.afterReady = false; this.afterLoading = true; this.resultImage = null;
     try {
-      const { url } = await this.scenes.renderEra(this.sceneId, this.era, this.variant, this.negatives || undefined, this.stylePreset || undefined, true);
+      const { url, record } = await this.scenes.renderEra(this.sceneId, this.era, this.variant, this.negatives || undefined, this.stylePreset || undefined, true);
+      this.resultWidth = (record?.width as number | undefined) || null;
+      this.resultHeight = (record?.height as number | undefined) || null;
+      await this.preload(url);
       this.resultImage = url;
+      this.afterReady = true;
       await this.refreshQuota();
     } catch (e: unknown) {
       console.error(e);
       this.error = this.errMsg(e);
     } finally {
       this.busy = false;
+      this.afterLoading = false;
     }
   }
 
@@ -138,6 +167,7 @@ export class DashboardPage {
   }
 
   private updateCompareFromEvent(ev: PointerEvent): void {
+    if (!this.afterReady) return;
     const el = ev.currentTarget as HTMLElement | null;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -151,6 +181,25 @@ export class DashboardPage {
       reader.onload = () => resolve(reader.result as string);
       reader.onerror = reject;
       reader.readAsDataURL(file);
+    });
+  }
+
+  private readImageSize(file: File): Promise<{ width: number; height: number }>{
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve({ width: img.naturalWidth || img.width, height: img.naturalHeight || img.height });
+      img.onerror = () => resolve({ width: 0, height: 0 });
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  private preload(url: string): Promise<void> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.onload = () => resolve();
+      img.onerror = () => resolve(); // don’t block UI on errors
+      img.src = url;
     });
   }
 

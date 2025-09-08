@@ -53,6 +53,8 @@ export class ScenesPage {
         const outputs = (r.outputs || {}) as SceneItem['outputs'];
         let coverEra: Era | undefined;
         let coverVariant: Variant | undefined;
+        let coverWidth: number | undefined;
+        let coverHeight: number | undefined;
         if (outputs) {
           const eras: Era[] = ['1890','1920','1940','1970','1980','1990','2000','2010','2090'];
           for (const e of eras) {
@@ -62,7 +64,7 @@ export class ScenesPage {
               coverEra = e;
               coverVariant = c.variant;
               // Capture natural dimensions when available
-              if (c.width && c.height) { (r as any)._coverWidth = c.width; (r as any)._coverHeight = c.height; }
+              if (c.width && c.height) { coverWidth = c.width; coverHeight = c.height; }
               break;
             }
           }
@@ -79,8 +81,8 @@ export class ScenesPage {
           coverEra,
           coverVariant,
           coverUrl,
-          coverWidth: (r as any)._coverWidth,
-          coverHeight: (r as any)._coverHeight,
+          coverWidth,
+          coverHeight,
         });
       }
       this.items = out;
