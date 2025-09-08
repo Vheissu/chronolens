@@ -9,7 +9,7 @@ export class PublicPage {
   coverUrl: string | null = null;
   error: string | null = null;
 
-  async load(params: Record<string, string>): Promise<void> {
+  async loading(params: Record<string, string>): Promise<void> {
     this.publicId = params.id;
   }
 
