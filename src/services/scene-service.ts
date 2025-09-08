@@ -2,7 +2,7 @@ import { DI } from '@aurelia/kernel';
 import { addDoc, collection, doc, serverTimestamp, updateDoc, type FieldValue } from 'firebase/firestore';
 import { getDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { getStorage, ref as storageRef, getDownloadURL } from 'firebase/storage';
+import { getStorage } from 'firebase/storage';
 import { resolve } from 'aurelia';
 import { IHttp } from './http-client';
 import { auth, db } from '../core/firebase';
@@ -69,8 +69,24 @@ export class SceneService {
   }
 
   async urlFromGsUri(gsUri: string): Promise<string> {
-    const path = this.gsUriToPath(gsUri);
-    return getDownloadURL(storageRef(this.storage, path));
+    try {
+      const path = this.gsUriToPath(gsUri); // scenes/:sceneId/...
+      const parts = path.split('/');
+      if (parts.length >= 4 && parts[0] === 'scenes') {
+        const sceneId = parts[1];
+        if (parts[2] === 'renders' && parts.length >= 5) {
+          const era = parts[3];
+          const variantWithExt = parts[4];
+          const variant = variantWithExt.replace(/\.jpg$/i, '') as Variant;
+          return `/api/scene/${sceneId}/${era}/${variant}.jpg`;
+        }
+        if (parts[2].startsWith('original')) {
+          return `/api/scene/${sceneId}/original.jpg`;
+        }
+      }
+    } catch { /* ignore */ }
+    // Fallback to original path if parsing fails (ensures no Storage call)
+    return '/api/scene/unknown/original.jpg';
   }
 
   async getScene(sceneId: string): Promise<Record<string, unknown> | null> {
