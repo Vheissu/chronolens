@@ -73,7 +73,7 @@
     </div>
   </mdui-card>
 
-  <mdui-card class="glass p-5 space-y-4">
+  <mdui-card class="glass popover-safe p-5 space-y-4">
     <h3 class="text-lg font-semibold flex items-center gap-2">
       <mdui-icon name="image"></mdui-icon>
       Result
@@ -100,7 +100,7 @@
         <input type="range" min="0" max="100" value.two-way="compare" />
         <span class="text-xs opacity-70">${compare}%</span>
       </div>
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2">
         <mdui-button variant="tonal" icon="autorenew" disabled.bind="busy || !sceneId" click.trigger="reroll()">Reroll</mdui-button>
         <mdui-button variant="tonal" icon="zoom_in" click.trigger="openModal()">View larger</mdui-button>
         <mdui-button variant="tonal" icon="download" click.trigger="downloadResult()">Download</mdui-button>

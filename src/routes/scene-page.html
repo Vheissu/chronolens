@@ -34,7 +34,7 @@
     </div>
   </mdui-card>
 
-  <mdui-card class="glass p-4 space-y-3">
+  <mdui-card class="glass popover-safe p-4 space-y-3">
     <h3 class="text-lg font-semibold flex items-center gap-2">
       <mdui-icon name="compare"></mdui-icon>
       Before / After
@@ -58,7 +58,7 @@
         <input type="range" min="0" max="100" value.two-way="compare" />
         <span class="text-xs opacity-70">${compare}%</span>
       </div>
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2">
         <mdui-button variant="tonal" icon="zoom_in" click.trigger="openModal()">View larger</mdui-button>
         <mdui-button variant="tonal" icon="download" click.trigger="downloadSelected()">Download</mdui-button>
       </div>
@@ -97,13 +97,13 @@
     <!-- Single image fallback: show whichever exists to avoid collapsing height -->
     <template if.bind="!originalUrl && resultUrl">
       <img class="rounded-xl w-full ring-1 ring-black/5" src.bind="resultUrl" alt="Result"/>
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2">
         <mdui-button variant="tonal" icon="download" click.trigger="downloadSelected()">Download</mdui-button>
       </div>
     </template>
     <template if.bind="originalUrl && !resultUrl">
       <img class="rounded-xl w-full ring-1 ring-black/5" src.bind="originalUrl" alt="Original"/>
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2">
         <mdui-button variant="tonal" icon="download" click.trigger="downloadSelected()">Download</mdui-button>
       </div>
     </template>
