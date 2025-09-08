@@ -4,16 +4,16 @@ import { route } from '@aurelia/router';
   routes: [
     {
       path: ['', 'welcome'],
-      component: import('./welcome-page'),
+      component: () => import('./welcome-page'),
       title: 'Welcome',
     },
     {
       path: 'about',
-      component: import('./about-page'),
+      component: () => import('./about-page'),
       title: 'About',
     },
   ],
-  fallback: import('./missing-page'),
+  fallback: () => import('./missing-page'),
 })
 export class MyApp {
 }

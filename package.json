@@ -10,7 +10,8 @@
   "dependencies": {
     "@aurelia/router": "latest",
     "aurelia": "latest",
-    "aurelia-mdui": "^0.0.2"
+    "aurelia-mdui": "^0.0.2",
+    "firebase": "^12.2.1"
   },
   "devDependencies": {
     "@aurelia/testing": "latest",
