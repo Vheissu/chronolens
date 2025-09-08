@@ -103,12 +103,12 @@ export class DashboardPage {
   }
 
   downloadResult(): void {
-    const url = this.resultImage;
-    if (!url) return;
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'chronolens-result';
-    a.click();
+    if (!this.sceneId) return;
+    const era = this.era;
+    const variant = this.variant;
+    const filename = `chronolens-${this.sceneId}-${era}-${variant}.jpg`;
+    const url = `/api/download/${this.sceneId}/${era}/${variant}.jpg?filename=${encodeURIComponent(filename)}`;
+    window.open(url, '_blank');
   }
 
   private toDataUrl(file: File): Promise<string> {

@@ -11,6 +11,7 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import sharp from "sharp";
 import { GoogleGenAI, createUserContent, type Part } from "@google/genai";
+import type { Request, Response } from "express";
 
 dotenv.config();
 setGlobalOptions({ maxInstances: 10, region: "us-central1" });
@@ -404,4 +405,77 @@ export const publishScene = onCall(async (req) => {
 
 export const health = onRequest((_req, res) => {
   res.json({ status: "ok" });
+});
+
+// --- Pretty URL serving & downloads ---
+function assertAccess(scene: SceneDoc, uid?: string | null): void {
+  const isOwner = !!uid && scene.ownerUid === uid;
+  const isPublic = !!scene.public?.isPublic;
+  if (!(isOwner || isPublic)) {
+    throw new HttpsError("permission-denied", "You do not have access to this scene");
+  }
+}
+
+async function outputPathFor(sceneId: string, era: Era, variant: Variant): Promise<string> {
+  const path = joinPath("scenes", sceneId, "renders", era, `${variant}.jpg`);
+  return (await fileExists(path)) ? path : path; // path is canonical
+}
+
+async function getSigned(path: string, filename: string, attachment: boolean): Promise<string> {
+  const file = bucket.file(path);
+  const expires = Date.now() + 5 * 60 * 1000; // 5 minutes
+  const disposition = `${attachment ? 'attachment' : 'inline'}; filename="${filename}"`;
+  const [url] = await file.getSignedUrl({ version: 'v4', action: 'read', expires, responseDisposition: disposition });
+  return url;
+}
+
+function parseEraVariant(req: Request): { sceneId: string; era: Era; variant: Variant }{
+  const parts = req.path.split('/').filter(Boolean);
+  // Expect: /api/(scene|download)/:sceneId/:era/:variant(.jpg)?
+  const sceneId = parts[2];
+  const era = (parts[3] || '') as Era;
+  const variant = ((parts[4] || '').replace(/\.jpg$/i, '')) as Variant;
+  if (!sceneId || !era || !variant) throw new HttpsError('invalid-argument', 'Invalid path');
+  return { sceneId, era, variant };
+}
+
+export const serveRender = onRequest(async (req: Request, res: Response) => {
+  try {
+    const { sceneId, era, variant } = parseEraVariant(req);
+    const uid = (req as any).auth?.uid || null; // will be undefined unless behind callable/identity proxy
+    const ref = db.collection('scenes').doc(sceneId);
+    const snap = await ref.get();
+    if (!snap.exists) throw new HttpsError('not-found', 'Scene not found');
+    const scene = snap.data() as SceneDoc;
+    assertAccess(scene, uid);
+    const p = await outputPathFor(sceneId, era, variant);
+    const url = await getSigned(p, `${sceneId}-${era}-${variant}.jpg`, false);
+    res.set('Cache-Control', 'private, max-age=60');
+    res.set('X-Robots-Tag', 'noimageindex');
+    res.redirect(302, url);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Error';
+    res.status(400).json({ error: msg });
+  }
+});
+
+export const downloadRender = onRequest(async (req: Request, res: Response) => {
+  try {
+    const { sceneId, era, variant } = parseEraVariant(req);
+    const ref = db.collection('scenes').doc(sceneId);
+    const snap = await ref.get();
+    if (!snap.exists) throw new HttpsError('not-found', 'Scene not found');
+    const scene = snap.data() as SceneDoc;
+    // Only owner or published scenes can be downloaded
+    assertAccess(scene, (req as any).auth?.uid || null);
+    const p = await outputPathFor(sceneId, era, variant);
+    const filename = (req.query?.filename as string) || `chronolens-${sceneId}-${era}-${variant}.jpg`;
+    const url = await getSigned(p, filename, true);
+    res.set('Cache-Control', 'private, max-age=60');
+    res.set('X-Robots-Tag', 'noimageindex');
+    res.redirect(302, url);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Error';
+    res.status(400).json({ error: msg });
+  }
 });
