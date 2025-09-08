@@ -75,6 +75,14 @@ async function fileExists(path: string): Promise<boolean> {
   return !!exists;
 }
 
+function sleep(ms: number): Promise<void> { return new Promise(r => setTimeout(r, ms)); }
+
+function isTransientError(err: unknown): boolean {
+  const s = (err as any)?.error?.status || (err as any)?.status || '';
+  const msg = (err as any)?.message || '';
+  return /UNAVAILABLE|DEADLINE_EXCEEDED|INTERNAL/i.test(String(s)) || /deadline|unavailable/i.test(String(msg));
+}
+
 function dailyLimitFromAuth(auth: any | undefined): number {
   const provider = auth?.token?.firebase?.sign_in_provider;
   return provider === "anonymous" ? 10 : 25;
@@ -275,7 +283,7 @@ export const getQuota = onCall(async (req) => {
   return q;
 });
 
-export const renderEra = onCall(async (req) => {
+export const renderEra = onCall({ timeoutSeconds: 300, memory: '1GiB' }, async (req) => {
   const uid = assertAuth(req);
   const { sceneId, era, variant, idempotencyKey } = req.data || {};
   const reroll = req?.data?.reroll === true;
@@ -306,8 +314,6 @@ export const renderEra = onCall(async (req) => {
     return { gsUri, variant: variantVal, cached: true };
   }
 
-  await chargeQuota(uid, 1, dailyLimitFromAuth(req.auth));
-
   if (!data?.original?.gsUri) {
     throw new HttpsError("failed-precondition", "Scene is missing original image");
   }
@@ -322,7 +328,30 @@ export const renderEra = onCall(async (req) => {
   ];
   const contents = createUserContent(inputParts);
 
-  const response = await ai.models.generateContent({ model: modelId, contents });
+  let response: any;
+  try {
+    // Retry transient errors up to 2 times with backoff
+    let attempt = 0;
+    while (true) {
+      try {
+        response = await ai.models.generateContent({ model: modelId, contents });
+        break;
+      } catch (e) {
+        if (attempt < 2 && isTransientError(e)) {
+          await sleep(500 * Math.pow(2, attempt));
+          attempt++;
+          continue;
+        }
+        throw e;
+      }
+    }
+  } catch (e) {
+    const msg = (e as any)?.message || 'Model error';
+    if (isTransientError(e)) {
+      throw new HttpsError('deadline-exceeded', `Generation timed out or is temporarily unavailable. Please try again. (${String(msg).slice(0, 120)})`);
+    }
+    throw new HttpsError('internal', `Generation failed: ${String(msg).slice(0, 200)}`);
+  }
   const cand = response.candidates?.[0];
   const parts = cand?.content?.parts || [];
   const imagePart = parts.find((p: any) => p?.inlineData?.data);
@@ -345,6 +374,8 @@ export const renderEra = onCall(async (req) => {
     { ...record },
   ];
   await ref.set({ outputs: newOutputs, updatedAt: FieldValue.serverTimestamp() } as Partial<SceneDoc>, { merge: true });
+  // Charge quota only after a successful render is saved
+  await chargeQuota(uid, 1, dailyLimitFromAuth(req.auth));
 
   logger.info("renderEra completed (gemini)", { sceneId, era: eraVal, variant: variantVal, idempotencyKey, modelId });
   return record;
