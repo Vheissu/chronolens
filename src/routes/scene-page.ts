@@ -8,7 +8,7 @@ export class ScenePage {
 
   sceneId = '';
   scene: Record<string, unknown> | null = null;
-  loading = true;
+  isLoading = true;
   error: string | null = null;
 
   selectedEra: Era = '1920';
@@ -32,7 +32,7 @@ export class ScenePage {
   }
 
   async refresh(): Promise<void> {
-    this.loading = true; this.error = null; this.resultUrl = null; this.originalUrl = null;
+    this.isLoading = true; this.error = null; this.resultUrl = null; this.originalUrl = null;
     try {
       this.scene = await this.scenes.getScene(this.sceneId);
       if (!this.scene) { this.error = 'Scene not found'; return; }
@@ -47,7 +47,7 @@ export class ScenePage {
     } catch (e) {
       this.error = e instanceof Error ? e.message : 'Failed to load scene';
     } finally {
-      this.loading = false;
+      this.isLoading = false;
     }
   }
 
