@@ -24,6 +24,7 @@ export class DashboardPage {
   era: Era = '1920';
   variant: Variant = 'balanced';
   negatives = '';
+  stylePreset = '';
   busy = false;
   sceneId: string | null = null;
   resultImage: string | null = null;
@@ -50,7 +51,7 @@ export class DashboardPage {
       const { path, width, height } = await this.scenes.uploadOriginal(this.sceneId, this.sourceFile);
       await this.scenes.setOriginalMeta(this.sceneId, path, width, height);
       // Render selected era/variant
-      const { url } = await this.scenes.renderEra(this.sceneId, this.era, this.variant, this.negatives || undefined);
+      const { url } = await this.scenes.renderEra(this.sceneId, this.era, this.variant, this.negatives || undefined, this.stylePreset || undefined);
       this.resultImage = url;
     } catch (e: unknown) {
       console.error(e);

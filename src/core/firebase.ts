@@ -7,7 +7,7 @@ const firebaseConfig = {
   apiKey: 'AIzaSyAgiXrgJw2t-IUIA6hMh1gakWhI3_75RDk',
   authDomain: 'chronolens-a4ab6.firebaseapp.com',
   projectId: 'chronolens-a4ab6',
-  storageBucket: 'chronolens-a4ab6.firebasestorage.app',
+  storageBucket: 'chronolens-a4ab6.appspot.com',
   messagingSenderId: '632850262774',
   appId: '1:632850262774:web:b7e35942610fad3d13dad7',
   measurementId: 'G-4WSP2BKKNP',
@@ -37,4 +37,3 @@ export async function authStateChanged(): Promise<{ user: unknown; token: IdToke
     });
   });
 }
-

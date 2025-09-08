@@ -29,7 +29,7 @@ function getGenAI(): GoogleGenAI {
   }
   return new GoogleGenAI({ apiKey });
 }
-type Era = "1920" | "1970" | "2090";
+type Era = "1890" | "1920" | "1940" | "1970" | "1980" | "1990" | "2000" | "2010" | "2090";
 type Variant = "mild" | "balanced" | "cinematic";
 
 interface SceneDoc {
@@ -220,7 +220,7 @@ async function gsInlinePart(gsUri: string): Promise<Part> {
   return { inlineData: { data: buffer.toString("base64"), mimeType: mime } } as Part;
 }
 
-function buildEraPrompt(era: Era, variant: Variant, negatives?: string): string {
+function buildEraPrompt(era: Era, variant: Variant, negatives?: string, style?: string): string {
   const intensity = variant === "mild" ? "20–30%" : variant === "balanced" ? "40–60%" : "70–90%";
   const lines: string[] = [];
   lines.push("Using the provided street photo, transform the scene to be historically accurate for the requested era while matching the original camera, perspective, and lighting.");
@@ -228,11 +228,29 @@ function buildEraPrompt(era: Era, variant: Variant, negatives?: string): string 
   lines.push("Preserve completely: building geometry, curb lines, vanishing points, window spacing, camera viewpoint, and shadow direction. Do not change the time of day or weather.");
   lines.push("Keep core composition and identities recognizable; avoid heavy changes to faces unless needed for era styling.");
   switch (era) {
+    case "1890":
+      lines.push("Era 1890: gas or early electric lamps; horse-drawn traffic; cast-iron facades; serif signage painted on wood; subdued sepia tone; remove modern vehicles and electronic displays.");
+      break;
     case "1920":
       lines.push("Era 1920: signage with serif lettering; early concrete and brick textures; reduced palette; lower saturation; subtle film grain; remove modern cars; no LED panels; add overhead cables sparingly; match sun direction.");
       break;
+    case "1940":
+      lines.push("Era 1940: mid-century storefronts; enamel signs; rounded vehicle silhouettes; muted primary colors; wartime-era materials where appropriate; no digital displays.");
+      break;
     case "1970":
       lines.push("Era 1970: saturated storefronts; period typography; boxy cars; sodium-vapor tint at night; storefront awnings; vinyl banners.");
+      break;
+    case "1980":
+      lines.push("Era 1980: neon accents; tube signage; chrome and bold geometric shapes; boxy cars; slight halation around lights; CRT-style screens only indoors.");
+      break;
+    case "1990":
+      lines.push("Era 1990: early backlit billboards; compact cars; VHS/early DV vibe optional; no smartphones; low-contrast graphics; remove LED walls.");
+      break;
+    case "2000":
+      lines.push("Era 2000: glossy billboards; early smartphones sparse; modern sedans; minimal LED panels; restrained color grading.");
+      break;
+    case "2010":
+      lines.push("Era 2010: LED billboards; glass facades; contemporary vehicles; saturated advertising; clean materials.");
       break;
     case "2090":
       lines.push("Era 2090: composite/self-healing materials with soft patina; subtle display surfaces; transit infrastructure; e-micromobility lanes; holographic signage; preserve street width/perspective.");
@@ -241,6 +259,9 @@ function buildEraPrompt(era: Era, variant: Variant, negatives?: string): string 
   lines.push("Constraints: avoid warping buildings or perspective; do not invent new people; avoid text overlays or watermarks; keep grain/texture consistent with the source.");
   if (negatives && negatives.trim().length) {
     lines.push(`Semantic negatives: ${negatives.trim()}`);
+  }
+  if (style && style.trim().length) {
+    lines.push(`Style preset: ${style.trim()}`);
   }
   lines.push("Steps: (1) Analyze the photo's lighting and materials. (2) Replace era-specific elements (signage, vehicles, materials) according to the target era. (3) Verify edges are clean and consistent with the photo's depth of field. (4) Ensure all preserved regions remain pixel-consistent.");
   lines.push("Output: a single edited image at the same resolution as the input.");
@@ -261,7 +282,7 @@ export const renderEra = onCall(async (req) => {
 
   const eraVal = String(era) as Era;
   const variantVal = String(variant) as Variant;
-  if (!(["1920", "1970", "2090"] as Era[]).includes(eraVal)) {
+  if (!(["1890","1920","1940","1970","1980","1990","2000","2010","2090"] as Era[]).includes(eraVal)) {
     throw new HttpsError("invalid-argument", "Invalid era");
   }
   if (!(["mild", "balanced", "cinematic"] as Variant[]).includes(variantVal)) {
@@ -290,7 +311,8 @@ export const renderEra = onCall(async (req) => {
   const modelId = DEFAULT_IMAGE_MODEL;
   const ai = getGenAI();
   const negatives = typeof req.data?.negatives === 'string' ? String(req.data.negatives) : undefined;
-  const prompt = buildEraPrompt(eraVal, variantVal, negatives);
+  const style = typeof req.data?.style === 'string' ? String(req.data.style) : undefined;
+  const prompt = buildEraPrompt(eraVal, variantVal, negatives, style);
   const inputParts: any[] = [
     prompt,
     await gsInlinePart(data.original.gsUri),
@@ -333,7 +355,7 @@ export const publishScene = onCall(async (req) => {
   const { ref, data } = await getSceneChecked(sceneId, uid);
 
   const outputs = (data.outputs ?? ({} as any)) as NonNullable<SceneDoc["outputs"]>;
-  const eras = (data.eras && data.eras.length ? data.eras : (["1920", "1970", "2090"] as Era[]));
+  const eras = (data.eras && data.eras.length ? data.eras : (["1890","1920","1940","1970","1980","1990","2000","2010","2090"] as Era[]));
   let coverRef: string | null = null;
   for (const e of eras) {
     const arr = outputs[e];

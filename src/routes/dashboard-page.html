@@ -15,11 +15,17 @@
       </div>
 
       <div class="space-y-2">
-        <div class="text-sm opacity-70">Era and intensity</div>
+        <div class="text-sm opacity-70">Era, intensity, and style</div>
         <div class="flex gap-2 items-center">
           <mdui-select label="Era" value.two-way="era">
+            <mdui-menu-item value="1890">1890</mdui-menu-item>
             <mdui-menu-item value="1920">1920</mdui-menu-item>
+            <mdui-menu-item value="1940">1940</mdui-menu-item>
             <mdui-menu-item value="1970">1970</mdui-menu-item>
+            <mdui-menu-item value="1980">1980</mdui-menu-item>
+            <mdui-menu-item value="1990">1990</mdui-menu-item>
+            <mdui-menu-item value="2000">2000</mdui-menu-item>
+            <mdui-menu-item value="2010">2010</mdui-menu-item>
             <mdui-menu-item value="2090">2090</mdui-menu-item>
           </mdui-select>
           <mdui-select label="Intensity" value.two-way="variant">
@@ -28,6 +34,16 @@
             <mdui-menu-item value="cinematic">Cinematic</mdui-menu-item>
           </mdui-select>
         </div>
+        <mdui-select label="Style (optional)" value.two-way="stylePreset">
+          <mdui-menu-item value="">None</mdui-menu-item>
+          <mdui-menu-item value="Noir black-and-white with deep contrast">Noir B&W</mdui-menu-item>
+          <mdui-menu-item value="Faded postcard toning and soft vignette">Faded Postcard</mdui-menu-item>
+          <mdui-menu-item value="VHS cassette artifacts and slight chroma bleed">VHS 90s</mdui-menu-item>
+          <mdui-menu-item value="Polaroid instant film look">Polaroid 70s</mdui-menu-item>
+          <mdui-menu-item value="Cyberpunk neon glow and reflective materials">Cyberpunk</mdui-menu-item>
+          <mdui-menu-item value="Kodachrome film palette and grain">Kodachrome</mdui-menu-item>
+          <mdui-menu-item value="Sepia tone and paper texture">Sepia 1900s</mdui-menu-item>
+        </mdui-select>
         <mdui-text-field label="Negatives (optional)" value.two-way="negatives" type="textarea"></mdui-text-field>
       </div>
     </div>

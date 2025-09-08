@@ -4,7 +4,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, db } from '../core/firebase';
 
-export type Era = '1920' | '1970' | '2090';
+export type Era = '1890' | '1920' | '1940' | '1970' | '1980' | '1990' | '2000' | '2010' | '2090';
 export type Variant = 'mild' | 'balanced' | 'cinematic';
 
 export interface RenderRecord { variant: Variant; gsUri: string; width?: number; height?: number; sha256?: string; }
@@ -53,10 +53,10 @@ export class SceneService {
     });
   }
 
-  async renderEra(sceneId: string, era: Era, variant: Variant, negatives?: string): Promise<{ url: string; record: RenderRecord }>{
-    type RenderEraInput = { sceneId: string; era: Era; variant: Variant; negatives?: string };
+  async renderEra(sceneId: string, era: Era, variant: Variant, negatives?: string, style?: string): Promise<{ url: string; record: RenderRecord }>{
+    type RenderEraInput = { sceneId: string; era: Era; variant: Variant; negatives?: string; style?: string };
     const callable = httpsCallable<RenderEraInput, RenderRecord>(this.functions, 'renderEra');
-    const record = await callable({ sceneId, era, variant, negatives }).then(r => r.data);
+    const record = await callable({ sceneId, era, variant, negatives, style }).then(r => r.data);
     const path = this.gsUriToPath(record.gsUri);
     const url = await getDownloadURL(storageRef(this.storage, path));
     return { url, record };
