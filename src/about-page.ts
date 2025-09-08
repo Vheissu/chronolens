@@ -1,3 +1,3 @@
 export class AboutPage {
-  public message = 'About Aurelia 2 Router';
-} 
+  public message = 'About Chronolens';
+}
