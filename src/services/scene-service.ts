@@ -2,7 +2,9 @@ import { DI } from '@aurelia/kernel';
 import { addDoc, collection, doc, serverTimestamp, updateDoc, type FieldValue } from 'firebase/firestore';
 import { getDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref as storageRef, getDownloadURL } from 'firebase/storage';
+import { resolve } from 'aurelia';
+import { IHttp } from './http-client';
 import { auth, db } from '../core/firebase';
 
 export type Era = '1890' | '1920' | '1940' | '1970' | '1980' | '1990' | '2000' | '2010' | '2090';
@@ -16,6 +18,7 @@ export type IScenes = SceneService;
 export class SceneService {
   private storage = getStorage();
   private functions = getFunctions(undefined, 'us-central1');
+  private http = resolve(IHttp);
 
   async createScene(eras: Era[] = ['1920', '1970', '2090'], title?: string): Promise<string> {
     const uid = auth.currentUser?.uid;
@@ -35,12 +38,9 @@ export class SceneService {
 
   async uploadOriginal(sceneId: string, file: File): Promise<{ path: string; width: number; height: number; contentType: string }>{
     const contentType = file.type || 'image/jpeg';
-    const ext = contentType.includes('png') ? 'png' : 'jpg';
-    const path = `scenes/${sceneId}/original.${ext}`;
-    const ref = storageRef(this.storage, path);
-    await uploadBytes(ref, file, { contentType });
-    const { width, height } = await this.readImageSize(file);
-    return { path, width, height, contentType };
+    const base64 = await this.fileToBase64(file);
+    const resp = await this.http.post<{ path: string; width: number; height: number; contentType: string }>(`/upload-original`, { sceneId, data: base64, mimeType: contentType });
+    return resp;
   }
 
   async setOriginalMeta(sceneId: string, path: string, width: number, height: number): Promise<void> {
@@ -83,6 +83,19 @@ export class SceneService {
     const callable = httpsCallable<{ sceneId: string }, { publicId: string }>(this.functions, 'publishScene');
     const res = await callable({ sceneId });
     return res.data;
+  }
+
+  private fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const comma = result.indexOf(',');
+        resolve(comma >= 0 ? result.slice(comma + 1) : result);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   }
 
   private readImageSize(file: File): Promise<{ width: number; height: number }>{

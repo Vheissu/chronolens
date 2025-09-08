@@ -56,8 +56,7 @@ export class DashboardPage {
         this.sceneId = await this.scenes.createScene();
       }
       // Upload original and attach metadata
-      const { path, width, height } = await this.scenes.uploadOriginal(this.sceneId, this.sourceFile);
-      await this.scenes.setOriginalMeta(this.sceneId, path, width, height);
+      await this.scenes.uploadOriginal(this.sceneId, this.sourceFile);
       // Render selected era/variant
       const { url } = await this.scenes.renderEra(this.sceneId, this.era, this.variant, this.negatives || undefined, this.stylePreset || undefined);
       this.resultImage = url;

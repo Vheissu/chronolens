@@ -11,6 +11,7 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import sharp from "sharp";
 import { GoogleGenAI, createUserContent, type Part } from "@google/genai";
+import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 import type { Request, Response } from "express";
 
 dotenv.config();
@@ -502,5 +503,48 @@ export const downloadRender = onRequest(async (req: Request, res: Response) => {
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Error';
     res.status(400).json({ error: msg });
+  }
+});
+
+export const uploadOriginal = onRequest(async (req: Request, res: Response) => {
+  try {
+    if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
+    const authz = req.header('authorization') || req.header('Authorization') || '';
+    const m = authz.match(/^Bearer\s+(.*)$/i);
+    if (!m) throw new HttpsError('unauthenticated', 'Missing token');
+    const decoded = await getAdminAuth().verifyIdToken(m[1]);
+    const uid = decoded.uid;
+
+    const body = (req as any).body || {};
+    const sceneId = String(body.sceneId || '').trim();
+    const data = String(body.data || '').trim();
+    const mime = String(body.mimeType || 'image/jpeg');
+    if (!sceneId || !data) throw new HttpsError('invalid-argument', 'sceneId and data are required');
+
+    const { ref } = await getSceneChecked(sceneId, uid);
+    const buf = Buffer.from(data, 'base64');
+    const ext = mime.includes('png') ? 'png' : 'jpg';
+    const outPath = joinPath('scenes', sceneId, `original.${ext}`);
+
+    const hash = crypto.createHash('sha256').update(buf).digest('hex');
+    const meta = await sharp(buf).metadata();
+    const width = meta.width || 0;
+    const height = meta.height || 0;
+
+    await bucket.file(outPath).save(buf, {
+      contentType: mime,
+      public: false,
+      resumable: false,
+      validation: false,
+    });
+
+    const gsUri = `gs://${bucket.name}/${outPath}`;
+    await ref.set({ original: { gsUri, width, height, sha256: hash }, updatedAt: FieldValue.serverTimestamp() } as Partial<SceneDoc>, { merge: true });
+
+    res.json({ path: outPath, width, height, contentType: mime, sha256: hash, gsUri });
+  } catch (e) {
+    const code = (e as any)?.code === 'unauthenticated' ? 401 : 400;
+    const msg = e instanceof Error ? e.message : 'Upload failed';
+    res.status(code).json({ error: msg });
   }
 });
