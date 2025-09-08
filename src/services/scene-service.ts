@@ -74,7 +74,7 @@ export class SceneService {
     return getDownloadURL(storageRef(this.storage, path));
   }
 
-  async getScene(sceneId: string): Promise<any | null> {
+  async getScene(sceneId: string): Promise<Record<string, unknown> | null> {
     const d = await getDoc(doc(db, 'scenes', sceneId));
     return d.exists() ? { id: d.id, ...d.data() } : null;
   }

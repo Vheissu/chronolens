@@ -7,7 +7,7 @@ export class ScenePage {
   private scenes = resolve(IScenes);
 
   sceneId = '';
-  scene: any | null = null;
+  scene: Record<string, unknown> | null = null;
   loading = true;
   error: string | null = null;
 
@@ -34,8 +34,9 @@ export class ScenePage {
     try {
       this.scene = await this.scenes.getScene(this.sceneId);
       if (!this.scene) { this.error = 'Scene not found'; return; }
-      if (this.scene?.original?.gsUri) {
-        try { this.originalUrl = await this.scenes.urlFromGsUri(this.scene.original.gsUri as string); } catch {}
+      const original = (this.scene?.original as { gsUri?: string } | undefined);
+      if (original?.gsUri) {
+        try { this.originalUrl = await this.scenes.urlFromGsUri(original.gsUri); } catch { /* ignore */ }
       }
       // Default era from doc if present
       const eras: Era[] = this.scene?.eras || ['1890','1920','1940','1970','1980','1990','2000','2010','2090'];
@@ -49,10 +50,10 @@ export class ScenePage {
   }
 
   private async selectExisting(): Promise<void> {
-    const outputs = (this.scene?.outputs?.[this.selectedEra] || []) as Output[];
+    const outputs = ((this.scene?.outputs as Record<string, Output[]> | undefined)?.[this.selectedEra] || []) as Output[];
     const found = outputs.find(o => o.variant === this.selectedVariant) || outputs[0];
     if (found) {
-      try { this.resultUrl = await this.scenes.urlFromGsUri(found.gsUri); } catch {}
+      try { this.resultUrl = await this.scenes.urlFromGsUri(found.gsUri); } catch { /* ignore */ }
     } else {
       this.resultUrl = null;
     }
@@ -90,4 +91,3 @@ export class ScenePage {
     }
   }
 }
-

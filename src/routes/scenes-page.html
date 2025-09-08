@@ -18,7 +18,7 @@
 
   <div class="grid gap-4 md:grid-cols-3">
     <template repeat.for="s of items">
-      <mdui-card class="p-3 space-y-2">
+      <mdui-card class="p-3 space-y-2" href.bind="'/scene/' + s.id" clickable="true">
         <template if.bind="s.coverUrl">
           <img class="rounded-md w-full" src.bind="s.coverUrl" alt="Scene preview"/>
         </template>
@@ -32,4 +32,3 @@
     <mdui-card class="p-4 text-sm opacity-70">No scenes yet. Generate one from the Dashboard.</mdui-card>
   </template>
 </section>
-

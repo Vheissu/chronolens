@@ -1,0 +1,15 @@
+<section class="space-y-4">
+  <mdui-card class="p-4">
+    <h2 class="text-xl font-semibold">Shared Scene</h2>
+  </mdui-card>
+  <template if.bind="error">
+    <mdui-card class="p-3 text-sm text-red-600">${error}</mdui-card>
+  </template>
+  <template if.bind="coverUrl">
+    <img class="rounded-lg w-full" src.bind="coverUrl" alt="Scene cover"/>
+  </template>
+  <template if.bind="!coverUrl && !error">
+    <div class="text-sm opacity-70">Loading…</div>
+  </template>
+</section>
+

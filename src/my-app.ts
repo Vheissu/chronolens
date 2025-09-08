@@ -7,6 +7,8 @@ import { resolve } from 'aurelia';
     { path: ['', 'home'], component: () => import('./routes/home-page'), title: 'Home' },
     { path: 'login', component: () => import('./routes/login-page'), title: 'Login' },
     { path: ['dashboard','generate'], component: () => import('./routes/dashboard-page'), title: 'Generate' },
+    { path: 'scene/:id', component: () => import('./routes/scene-page'), title: 'Scene' },
+    { path: 'p/:id', component: () => import('./routes/public-page'), title: 'Share' },
     { path: 'scenes', component: () => import('./routes/scenes-page'), title: 'Scenes' },
     { path: 'about', component: () => import('./about-page'), title: 'About' },
   ],
