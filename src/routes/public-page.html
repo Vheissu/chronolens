@@ -21,7 +21,7 @@
            pointerup.trigger="onSliderEnd()"
            pointerleave.trigger="onSliderEnd()">
         <img class="block w-full select-none" src.bind="originalUrl" alt="Original"/>
-        <img class="absolute top-0 left-0 w-full h-auto select-none" src.bind="resultUrl" alt="Result"
+        <img class="absolute top-0 left-0 w-full h-auto select-none" src.bind="resultUrl" alt="Result" error.trigger="resultUrl = null"
              style.bind="'clip-path: inset(0 ' + (100 - compare) + '% 0 0)'"/>
         <div class="absolute inset-y-0" style.bind="'left: ' + compare + '%'">
           <div class="-translate-x-1/2 w-0.5 h-full bg-white/80 shadow"></div>
@@ -46,7 +46,7 @@
                  pointerup.trigger="onSliderEnd()"
                  pointerleave.trigger="onSliderEnd()">
               <img class="block w-full select-none" src.bind="originalUrl" alt="Original large"/>
-              <img class="absolute top-0 left-0 w-full h-auto select-none" src.bind="resultUrl" alt="Result large"
+              <img class="absolute top-0 left-0 w-full h-auto select-none" src.bind="resultUrl" alt="Result large" error.trigger="resultUrl = null"
                    style.bind="'clip-path: inset(0 ' + (100 - compare) + '% 0 0)'"/>
               <div class="absolute inset-y-0" style.bind="'left: ' + compare + '%'">
                 <div class="-translate-x-1/2 w-0.5 h-full bg-white/80 shadow"></div>

@@ -32,6 +32,29 @@ export class PublicPage {
       } else if (data.coverRef) {
         try { this.resultUrl = await this.scenes.urlFromGsUri(data.coverRef, sceneId); } catch { this.resultUrl = null; }
       }
+
+      // If we still don't have a result URL, read the scene doc and pick an available output
+      if (!this.resultUrl) {
+        const sceneSnap = await getDoc(doc(db, 'scenes', sceneId));
+        if (sceneSnap.exists()) {
+          const sdata = sceneSnap.data() as { outputs?: Record<string, Array<{ variant: Variant; gsUri: string }>> };
+          const outputs = (sdata?.outputs || {}) as Record<string, Array<{ variant: Variant; gsUri: string }>>;
+          const orderedEras: Era[] = ['1890','1920','1940','1970','1980','1990','2000','2010','2090'];
+          let chosen: { era: Era; variant: Variant; gsUri?: string } | null = null;
+          for (const e of orderedEras) {
+            const arr = outputs[e] || [];
+            if (arr.length) {
+              const bal = arr.find(x => x.variant === 'balanced' as Variant) || arr[0];
+              chosen = { era: e as Era, variant: bal.variant as Variant, gsUri: bal.gsUri };
+              break;
+            }
+          }
+          if (chosen) {
+            try { this.resultUrl = await this.scenes.renderUrl(sceneId, chosen.era, chosen.variant); }
+            catch { try { if (chosen.gsUri) this.resultUrl = await this.scenes.urlFromGsUri(chosen.gsUri, sceneId); } catch { /* ignore */ } }
+          }
+        }
+      }
     } catch (e) {
       this.error = e instanceof Error ? e.message : 'Failed to load';
     }
