@@ -73,6 +73,12 @@ html.mdui-theme-dark .app-decor {
   border: 1px solid rgb(255 255 255 / 18%);
 }
 
+/* Avoid clipping of popovers/menus in cards that contain selects/dropdowns.
+   backdrop-filter creates a containing block for position: fixed descendants,
+   which may cause MDUI menus to be clipped by the card's overflow. Apply
+   .popover-safe to such cards to disable the backdrop filter. */
+.popover-safe { backdrop-filter: none !important; }
+
 html[data-mdui-theme="dark"] .glass,
 html.mdui-theme-dark .glass {
   border-color: rgb(255 255 255 / 8%);
