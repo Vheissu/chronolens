@@ -41,8 +41,17 @@ export class DashboardPage {
   async onPickSource(ev: Event): Promise<void> {
     const input = ev.target as HTMLInputElement;
     const file = input.files?.[0] ?? null;
-    this.sourceFile = file;
-    this.sourcePreview = file ? await this.toDataUrl(file) : null;
+    if (file) {
+      const okType = ['image/jpeg','image/png','image/webp'].includes((file.type || '').toLowerCase());
+      const okSize = file.size <= 5 * 1024 * 1024;
+      if (!okType) { this.error = 'Unsupported file type. Use JPEG/PNG/WebP.'; this.sourceFile = null; this.sourcePreview = null; return; }
+      if (!okSize) { this.error = 'File exceeds 5 MB limit.'; this.sourceFile = null; this.sourcePreview = null; return; }
+      this.sourceFile = file;
+      this.sourcePreview = await this.toDataUrl(file);
+    } else {
+      this.sourceFile = null;
+      this.sourcePreview = null;
+    }
   }
 
   async generate(): Promise<void> {

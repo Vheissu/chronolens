@@ -523,11 +523,23 @@ export const uploadOriginal = onRequest(async (req: Request, res: Response) => {
 
     const { ref } = await getSceneChecked(sceneId, uid);
     const buf = Buffer.from(data, 'base64');
-    const ext = mime.includes('png') ? 'png' : 'jpg';
+
+    // Enforce limits: 5 MB and JPEG/PNG/WebP only
+    const maxBytes = 5 * 1024 * 1024;
+    if (buf.length > maxBytes) throw new HttpsError('invalid-argument', 'File exceeds 5 MB limit');
+    const allowed = new Set(['image/jpeg','image/jpg','image/png','image/webp']);
+    if (!allowed.has(mime.toLowerCase())) throw new HttpsError('invalid-argument', 'Unsupported file type. Use JPEG/PNG/WebP');
+
+    const ext = mime.includes('png') ? 'png' : mime.includes('webp') ? 'webp' : 'jpg';
     const outPath = joinPath('scenes', sceneId, `original.${ext}`);
 
     const hash = crypto.createHash('sha256').update(buf).digest('hex');
     const meta = await sharp(buf).metadata();
+    // Validate the decoded format too (defense-in-depth)
+    const fmt = (meta.format || '').toLowerCase();
+    if (!['jpeg','jpg','png','webp'].includes(fmt)) {
+      throw new HttpsError('invalid-argument', 'Image format not recognized as JPEG/PNG/WebP');
+    }
     const width = meta.width || 0;
     const height = meta.height || 0;
 
