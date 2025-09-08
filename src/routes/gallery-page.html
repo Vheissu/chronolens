@@ -1,0 +1,36 @@
+<section class="space-y-4">
+  <mdui-card class="glass p-4">
+    <h2 class="text-xl font-semibold flex items-center gap-2">
+      <mdui-icon name="public"></mdui-icon>
+      Community Gallery
+    </h2>
+    <p class="text-sm opacity-70">Recently published scenes from the community. Click to view.</p>
+  </mdui-card>
+
+  <template if.bind="busy">
+    <div class="flex items-center gap-2 text-sm opacity-70">
+      <mdui-circular-progress indeterminate></mdui-circular-progress>
+      Loading…
+    </div>
+  </template>
+  <template if.bind="error">
+    <mdui-card class="p-3 text-red-600 text-sm">${error}</mdui-card>
+  </template>
+
+  <div class="grid gap-4 md:grid-cols-3">
+    <template repeat.for="g of items">
+      <mdui-card class="glass p-3 space-y-2 hover:shadow-lg transition-shadow" href.bind="'/p/' + g.publicId" clickable="true">
+        <template if.bind="g.coverUrl">
+          <img class="rounded-md w-full ring-1 ring-black/5" src.bind="g.coverUrl" alt="Published scene"/>
+        </template>
+        <div class="text-sm font-semibold">Public ID: ${g.publicId}</div>
+        <div class="text-xs opacity-70" if.bind="g.createdAt">${g.createdAt.toLocaleString?.() || ''}</div>
+      </mdui-card>
+    </template>
+  </div>
+
+  <template if.bind="!busy && !items.length">
+    <mdui-card class="glass p-4 text-sm opacity-70">No public scenes yet. Be the first to publish from a generated scene.</mdui-card>
+  </template>
+</section>
+
