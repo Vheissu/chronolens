@@ -101,6 +101,10 @@ export class SceneService {
       const parts = path.split('/');
       if (parts.length >= 4 && parts[0] === 'scenes') {
         const sceneId = parts[1];
+        if (parts[2] === 'thumbs') {
+          // Thumbnails don't map cleanly to a specific render; prefer original
+          return this.originalUrl(sceneId);
+        }
         if (parts[2] === 'renders' && parts.length >= 5) {
           const era = parts[3];
           const variantWithExt = parts[4];

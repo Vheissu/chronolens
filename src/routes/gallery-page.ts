@@ -94,4 +94,12 @@ export class GalleryPage {
   }
 
   clearFilters(): void { this.filterEra = ''; this.filterVariant = ''; }
+
+  async fallbackCover(item: GalleryItem): Promise<void> {
+    try {
+      if (item.sceneId) {
+        item.coverUrl = await this.scenes.originalUrl(item.sceneId);
+      }
+    } catch { /* ignore */ }
+  }
 }

@@ -47,7 +47,7 @@
     <template repeat.for="g of visibleItems">
       <mdui-card class="glass p-3 space-y-2 hover:shadow-lg transition-shadow" href.bind="'/p/' + g.publicId" clickable="true">
         <template if.bind="g.coverUrl">
-          <img class="rounded-md w-full ring-1 ring-black/5" src.bind="g.coverUrl" alt="Published scene"/>
+          <img class="rounded-md w-full ring-1 ring-black/5" src.bind="g.coverUrl" alt="Published scene" loading="lazy" decoding="async" error.trigger="fallbackCover(g)"/>
         </template>
         <div class="text-sm font-semibold">Public ID: ${g.publicId}</div>
         <div class="text-xs opacity-70" if.bind="g.createdAt">${g.createdAt.toLocaleString?.() || ''}</div>
