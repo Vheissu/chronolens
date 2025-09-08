@@ -23,11 +23,7 @@ import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import sharp from "sharp";
-import {
-  GoogleGenAI,
-  createUserContent,
-  type Part,
-} from "@google/genai";
+import { GoogleGenAI, createUserContent, type Part } from "@google/genai";
 
 dotenv.config();
 
@@ -60,7 +56,7 @@ interface SceneDoc {
   title?: string;
   status?: "draft" | "ready" | "publishing" | "published";
   original?: { gsUri?: string; width?: number; height?: number; sha256?: string } | null;
-  masks?: Array<{ id: string; label: "person" | "vehicle" | "pet" | "manual"; gsUri: string; areaPx?: number }>;
+  masks?: Array<{ id: string; label: "person" | "vehicle" | "pet" | "manual"; gsUri: string; areaPx?: number }>; // unused in mask-free flow
   eras?: Era[];
   outputs?: Record<Era, Array<{ variant: Variant; gsUri: string; width?: number; height?: number; sha256?: string; meta?: any }>>;
   public?: { isPublic?: boolean; publicId?: string | null; createdAt?: FirebaseFirestore.Timestamp };
@@ -195,9 +191,7 @@ async function getSceneChecked(sceneId: string, uid: string): Promise<{ ref: Fir
   return { ref, data };
 }
 
-async function writeMasks(sceneRef: FirebaseFirestore.DocumentReference, masks: SceneDoc["masks"]): Promise<void> {
-  await sceneRef.set({ masks: masks ?? [], updatedAt: FieldValue.serverTimestamp() } as Partial<SceneDoc>, { merge: true });
-}
+// Mask-free flow: no server writes to masks needed
 
 async function saveRender(
   sceneId: string,
@@ -261,18 +255,14 @@ async function gsInlinePart(gsUri: string): Promise<Part> {
   return { inlineData: { data: buffer.toString("base64"), mimeType: mime } } as Part;
 }
 
-function buildEraPrompt(era: Era, variant: Variant, hasMasks: boolean, negatives?: string): string {
+function buildEraPrompt(era: Era, variant: Variant, negatives?: string): string {
   const intensity = variant === "mild" ? "20–30%" : variant === "balanced" ? "40–60%" : "70–90%";
   const lines: string[] = [];
   // Narrative first: describe desired scene according to best practices
   lines.push("Using the provided street photo, transform the scene to be historically accurate for the requested era while matching the original camera, perspective, and lighting.");
   lines.push(`Overall intensity: ${variant} (${intensity} change), keeping the photo's identity intact.`);
   lines.push("Preserve completely: building geometry, curb lines, vanishing points, window spacing, camera viewpoint, and shadow direction. Do not change the time of day or weather.");
-  if (hasMasks) {
-    lines.push("There is a companion black/white mask image: white = subjects to KEEP unchanged; black = regions that may be edited. Do not alter any white areas.");
-  } else {
-    lines.push("Important: Keep human subjects unchanged. Avoid altering people or pets.");
-  }
+  lines.push("Keep core composition and identities recognizable; avoid heavy changes to faces unless needed for era styling.");
   switch (era) {
     case "1920":
       lines.push("Era 1920: signage with serif lettering; early concrete and brick textures; reduced palette; lower saturation; subtle film grain; remove modern cars; no LED panels; add overhead cables sparingly; match sun direction.");
@@ -294,40 +284,6 @@ function buildEraPrompt(era: Era, variant: Variant, hasMasks: boolean, negatives
   return lines.join("\n");
 }
 
-async function buildUnionMaskPartIfAny(scene: SceneDoc): Promise<Part | null> {
-  const masks = Array.isArray(scene.masks) ? scene.masks : [];
-  if (masks.length === 0) return null;
-  try {
-    // Load first mask to get dimensions
-    const firstPath = gsPathFromUri(masks[0].gsUri);
-    if (!firstPath) return null;
-    const [firstBuf] = await bucket.file(firstPath).download();
-    const meta = await sharp(firstBuf).metadata();
-    const width = meta.width || 0;
-    const height = meta.height || 0;
-    if (!width || !height) return null;
-
-    // Prepare a union by repeatedly lightening over a black canvas
-    const prepared: Buffer[] = [];
-    for (const m of masks) {
-      const p = gsPathFromUri(m.gsUri);
-      if (!p) continue;
-      const [buf] = await bucket.file(p).download();
-      const bin = await sharp(buf).removeAlpha().greyscale().threshold(1).toColourspace('b-w').toBuffer();
-      prepared.push(bin);
-    }
-    if (prepared.length === 0) return null;
-    let pipeline = sharp(prepared[0]);
-    for (let i = 1; i < prepared.length; i++) {
-      pipeline = pipeline.composite([{ input: prepared[i], blend: 'lighten' }]);
-    }
-    const union = await pipeline.png().toBuffer();
-    return { inlineData: { data: union.toString('base64'), mimeType: 'image/png' } } as Part;
-  } catch {
-    return null; // mask building is best-effort; don't fail generation on mask issues
-  }
-}
-
 // ---------- Callable Endpoints ----------
 
 export const getQuota = onCall(async (req) => {
@@ -346,17 +302,10 @@ export const analyzeScene = onCall(async (req) => {
     throw new HttpsError("failed-precondition", "Scene is missing original image");
   }
 
-  // Rate limit: 1 token
-  await chargeQuota(uid, 1, dailyLimitFromAuth(req.auth));
-
-  // STUB: In a future iteration, call Gemini to detect masks and write PNGs.
-  // For now, we return an empty set and keep client mask editing functional.
-  const masks: SceneDoc["masks"] = [];
-  await writeMasks(ref, masks);
-
+  // Mask-free flow: no analyze step needed
   await ref.set({ status: "ready", updatedAt: FieldValue.serverTimestamp() } as Partial<SceneDoc>, { merge: true });
-  logger.info("analyzeScene completed", { sceneId });
-  return { masks };
+  logger.info("analyzeScene noop", { sceneId });
+  return { ok: true };
 });
 
 export const renderEra = onCall(async (req) => {
@@ -400,18 +349,12 @@ export const renderEra = onCall(async (req) => {
   }
   const modelId = DEFAULT_IMAGE_MODEL;
   const ai = getGenAI();
-  const hasMasks = Array.isArray(data?.masks) && data!.masks!.length > 0;
   const negatives = typeof req.data?.negatives === 'string' ? String(req.data.negatives) : undefined;
-  const prompt = buildEraPrompt(eraVal, variantVal, hasMasks, negatives);
+  const prompt = buildEraPrompt(eraVal, variantVal, negatives);
   const inputParts: any[] = [
     prompt,
     await gsInlinePart(data.original.gsUri),
   ];
-  const maskPart = await buildUnionMaskPartIfAny(data);
-  if (maskPart) {
-    inputParts.push("Reference mask: white = preserve, black = editable.");
-    inputParts.push(maskPart);
-  }
   const contents = createUserContent(inputParts);
 
   const response = await ai.models.generateContent({ model: modelId, contents });
