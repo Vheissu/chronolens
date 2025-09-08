@@ -2,16 +2,28 @@ import { resolve } from 'aurelia';
 import { IScenes, type Era, type Variant } from '../services/scene-service';
 import { collection, getDocs, query, where, orderBy, limit, type DocumentData } from 'firebase/firestore';
 import { auth, db } from '../core/firebase';
+import { IAuth } from '../services/auth-service';
+import { IRouter } from '@aurelia/router';
 
 type Output = { variant: Variant; gsUri: string; width?: number; height?: number; sha256?: string };
 type SceneItem = { id: string; title?: string | null; createdAt?: unknown; outputs?: Partial<Record<Era, Output[]>>; coverEra?: Era; coverVariant?: Variant; coverUrl?: string };
 
 export class ScenesPage {
   private scenes = resolve(IScenes);
+  public auth = resolve(IAuth);
+  private get router() { return resolve(IRouter); }
 
   items: SceneItem[] = [];
   busy = false;
   error: string | null = null;
+
+  async canLoad(): Promise<boolean> {
+    if (!this.auth.isLoggedIn || this.auth.isAnonymous) {
+      await this.router.load('generate');
+      return false;
+    }
+    return true;
+  }
 
   async attaching() {
     await this.load();
