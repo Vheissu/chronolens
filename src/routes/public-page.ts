@@ -1,12 +1,18 @@
 import { resolve } from 'aurelia';
-import { IScenes } from '../services/scene-service';
+import { IScenes, type Era, type Variant } from '../services/scene-service';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../core/firebase';
 
 export class PublicPage {
   private scenes = resolve(IScenes);
   publicId = '';
-  coverUrl: string | null = null;
+  // Display
+  originalUrl: string | null = null;
+  resultUrl: string | null = null;
+  // Controls
+  compare = 50;
+  private dragging = false;
+  modalOpen = false;
   error: string | null = null;
 
   async loading(params: Record<string, string>): Promise<void> {
@@ -18,17 +24,36 @@ export class PublicPage {
       const snap = await getDoc(doc(db, 'public', this.publicId));
       if (!snap.exists()) { this.error = 'Not found'; return; }
       const data = snap.data() as { coverRef?: string; coverEra?: string; coverVariant?: string; sceneId?: string };
-      if (data?.sceneId && data?.coverEra && data?.coverVariant) {
-        this.coverUrl = `/api/scene/${data.sceneId}/${data.coverEra}/${data.coverVariant}.jpg`;
-      } else if (data?.sceneId && data?.coverRef) {
-        // Fallback for older published docs: support gs:// and https storage URLs; fall back to original by id
-        try { this.coverUrl = await this.scenes.urlFromGsUri(data.coverRef, data.sceneId); } catch { this.coverUrl = await this.scenes.originalUrl(data.sceneId); }
-      } else if (data?.sceneId) {
-        // As a last resort, try original by id
-        this.coverUrl = await this.scenes.originalUrl(data.sceneId);
+      const sceneId = data.sceneId as string | undefined;
+      if (!sceneId) { this.error = 'Missing scene reference'; return; }
+      try { this.originalUrl = await this.scenes.originalUrl(sceneId); } catch { this.originalUrl = null; }
+      if (data.coverEra && data.coverVariant) {
+        try { this.resultUrl = await this.scenes.renderUrl(sceneId, data.coverEra as Era, data.coverVariant as Variant); } catch { this.resultUrl = null; }
+      } else if (data.coverRef) {
+        try { this.resultUrl = await this.scenes.urlFromGsUri(data.coverRef, sceneId); } catch { this.resultUrl = null; }
       }
     } catch (e) {
       this.error = e instanceof Error ? e.message : 'Failed to load';
     }
+  }
+
+  // Compare slider interactions
+  openModal(): void { this.modalOpen = true; }
+  closeModal(): void { this.modalOpen = false; }
+  noop(ev: Event): void { ev.stopPropagation(); }
+  onSliderStart(ev: PointerEvent): void { this.dragging = true; this.updateCompareFromEvent(ev); }
+  onSliderMove(ev: PointerEvent): void { if (!this.dragging) return; this.updateCompareFromEvent(ev); }
+  onSliderEnd(): void { this.dragging = false; }
+  private updateCompareFromEvent(ev: PointerEvent): void {
+    const el = ev.currentTarget as HTMLElement | null; if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = Math.min(Math.max(ev.clientX - rect.left, 0), rect.width);
+    this.compare = Math.round((x / rect.width) * 100);
+  }
+
+  async downloadSelected(): Promise<void> {
+    // Prefer result for download; fall back to original
+    if (this.resultUrl) { window.open(this.resultUrl, '_blank'); return; }
+    if (this.originalUrl) { window.open(this.originalUrl, '_blank'); }
   }
 }
