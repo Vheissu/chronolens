@@ -18,9 +18,16 @@
 
   <div class="grid gap-4 md:grid-cols-3">
     <template repeat.for="s of items">
-      <mdui-card class="glass p-3 space-y-2 hover:shadow-lg transition-shadow" href.bind="'/scene/' + s.id" clickable="true">
+      <mdui-card class="glass p-3 space-y-2 hover:shadow-lg transition-shadow overflow-hidden" href.bind="'/scene/' + s.id" clickable="true">
         <template if.bind="s.coverUrl">
-          <img class="rounded-md w-full ring-1 ring-black/5" src.bind="s.coverUrl" alt="Scene preview"/>
+          <div class="rounded-md w-full ring-1 ring-black/5 checker bg-white/40 dark:bg-black/20 overflow-hidden"
+               style.bind="'aspect-ratio: ' + (s.coverWidth && s.coverHeight ? (s.coverWidth + ' / ' + s.coverHeight) : '4 / 3')">
+            <img class="block w-full h-full object-cover"
+                 src.bind="s.coverUrl"
+                 alt="Scene preview"
+                 loading="lazy" decoding="async"
+                 width.bind="s.coverWidth" height.bind="s.coverHeight" />
+          </div>
         </template>
         <div class="text-sm font-semibold">${s.title || ('Scene ' + s.id.slice(0, 6))}</div>
         <div class="text-xs opacity-70" if.bind="s.createdAt?.toDate">${s.createdAt.toDate().toLocaleString?.() || ''}</div>

@@ -6,7 +6,18 @@ import { IAuth } from '../services/auth-service';
 import { IRouter } from '@aurelia/router';
 
 type Output = { variant: Variant; gsUri: string; width?: number; height?: number; sha256?: string };
-type SceneItem = { id: string; title?: string | null; createdAt?: unknown; outputs?: Partial<Record<Era, Output[]>>; coverEra?: Era; coverVariant?: Variant; coverUrl?: string };
+type SceneItem = {
+  id: string;
+  title?: string | null;
+  createdAt?: unknown;
+  outputs?: Partial<Record<Era, Output[]>>;
+  coverEra?: Era;
+  coverVariant?: Variant;
+  coverUrl?: string;
+  // Natural size of chosen cover (if known) – helps reserve space
+  coverWidth?: number;
+  coverHeight?: number;
+};
 
 export class ScenesPage {
   private scenes = resolve(IScenes);
@@ -46,14 +57,31 @@ export class ScenesPage {
           const eras: Era[] = ['1890','1920','1940','1970','1980','1990','2000','2010','2090'];
           for (const e of eras) {
             const arr = (outputs as Record<string, Output[]>)[e] as Output[] | undefined;
-            if (arr && arr.length) { const c = arr.find(x => x.variant === 'balanced') || arr[0]; coverEra = e; coverVariant = c.variant; break; }
+            if (arr && arr.length) {
+              const c = arr.find(x => x.variant === 'balanced') || arr[0];
+              coverEra = e;
+              coverVariant = c.variant;
+              // Capture natural dimensions when available
+              if (c.width && c.height) { (r as any)._coverWidth = c.width; (r as any)._coverHeight = c.height; }
+              break;
+            }
           }
         }
         let coverUrl: string | undefined;
         if (coverEra && coverVariant) {
           try { coverUrl = await this.scenes.renderUrl(r.id, coverEra, coverVariant); } catch { /* ignore */ }
         }
-        out.push({ id: r.id, title: r.title || null, createdAt: r.createdAt, outputs, coverEra, coverVariant, coverUrl });
+        out.push({
+          id: r.id,
+          title: r.title || null,
+          createdAt: r.createdAt,
+          outputs,
+          coverEra,
+          coverVariant,
+          coverUrl,
+          coverWidth: (r as any)._coverWidth,
+          coverHeight: (r as any)._coverHeight,
+        });
       }
       this.items = out;
     } catch (e) {
