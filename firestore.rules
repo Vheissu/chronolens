@@ -5,46 +5,35 @@ service cloud.firestore {
     function isSignedIn() { return request.auth != null; }
     function isOwner(uid) { return isSignedIn() && request.auth.uid == uid; }
 
-    // Users: readable by self; writes restricted to server-side (Functions)
     match /users/{uid} {
       allow read: if isOwner(uid);
       allow write: if false;
     }
 
-    // Scenes: owner-readable/writeable (except public/outputs which are server-managed); public readable when published
     match /scenes/{sceneId} {
       allow read: if resource.data.public.isPublic == true || isOwner(resource.data.ownerUid);
-
-      // Create: only the authenticated owner can create; forbid setting server-managed fields
       allow create: if isSignedIn()
                  && request.resource.data.ownerUid == request.auth.uid
                  && request.resource.data.keys().hasOnly([
-                      'ownerUid','title','original','masks','eras','status','createdAt','updatedAt'
+                      'ownerUid','title','original','eras','status','createdAt','updatedAt'
                     ]);
-
-      // Update: owner may update editable fields; forbid modifying server-managed fields
       allow update: if isOwner(resource.data.ownerUid)
                  && request.resource.data.ownerUid == resource.data.ownerUid
                  && request.resource.data.outputs == resource.data.outputs
                  && request.resource.data.public == resource.data.public;
-
-      // Delete: owner only
       allow delete: if isOwner(resource.data.ownerUid);
     }
 
-    // Jobs: readable by owner; client writes not allowed (enqueue via Functions only)
     match /jobs/{jobId} {
       allow read: if isOwner(resource.data.ownerUid);
       allow write: if false;
     }
 
-    // Public pages: world-readable; server-only writes
     match /public/{publicId} {
       allow read: if true;
       allow write: if false;
     }
 
-    // Default deny
     match /{document=**} {
       allow read, write: if false;
     }
