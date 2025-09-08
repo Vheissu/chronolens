@@ -52,7 +52,7 @@
     </div>
 
     <div class="flex items-center gap-2">
-      <mdui-button variant="filled" icon="bolt" disabled.bind="busy || !sourceFile" click.trigger="generate()">Generate</mdui-button>
+      <mdui-button variant="filled" icon="bolt" disabled.bind="busy || !sourceFile || !auth.currentUser" click.trigger="generate()">Generate</mdui-button>
       <template if.bind="busy">
         <mdui-circular-progress indeterminate></mdui-circular-progress>
       </template>
