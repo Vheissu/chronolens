@@ -1,29 +1,12 @@
-import { describe, it } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { MyApp } from '../src/my-app';
 import { createFixture } from '@aurelia/testing';
 
 describe('my-app', () => {
-  it('should render message', async () => {
-    const { assertText } = await createFixture(
-      '<my-app></my-app>',
-      {},
-      [MyApp],
-    ).started;
-
-    // For TailwindCSS templates, just check that the text is present
-    // The assertText function will throw if no text is found at all
-    try {
-      assertText('Hello World!', { compact: true });
-    } catch (e) {
-      // If exact match fails, check if the text contains 'Hello World!'
-      // This handles TailwindCSS templates with additional text
-      const message = e.message || '';
-      if (message.includes('Hello World!')) {
-        // Text is present, test passes
-        return;
-      }
-      throw e; // Re-throw if the text isn't found at all
-    }
+  it('renders the top app bar and routes', async () => {
+    const { appHost } = await createFixture('<my-app></my-app>', {}, [MyApp]).started;
+    expect(appHost.textContent?.includes('Chronolens')).toBe(true);
+    // Check that router viewport exists
+    expect(appHost.querySelector('au-viewport')).toBeTruthy();
   });
-
 });

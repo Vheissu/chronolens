@@ -1,0 +1,26 @@
+<mdui-card class="max-w-md mx-auto p-6 space-y-4">
+  <h2 class="text-2xl font-semibold">${mode === 'sign-in' ? 'Sign In' : 'Create Account'}</h2>
+
+  <template if.bind="error">
+    <mdui-alert closeable type="error">${error}</mdui-alert>
+  </template>
+
+  <mdui-text-field label="Email" type="email" value.two-way="email"></mdui-text-field>
+  <mdui-text-field label="Password" type="password" value.two-way="password"></mdui-text-field>
+
+  <div class="flex gap-2 items-center">
+    <mdui-button variant="filled" icon="login" disabled.bind="busy" click.trigger="submit()">
+      ${mode === 'sign-in' ? 'Sign In' : 'Register'}
+    </mdui-button>
+    <mdui-button variant="text" icon="google" disabled.bind="busy" click.trigger="auth.signInWithGoogle()">
+      Sign in with Google
+    </mdui-button>
+  </div>
+
+  <div class="text-sm text-gray-600">
+    <a href="#" click.trigger="mode = mode === 'sign-in' ? 'register' : 'sign-in'">
+      ${mode === 'sign-in' ? 'Need an account? Register' : 'Already have an account? Sign in'}
+    </a>
+  </div>
+</mdui-card>
+
