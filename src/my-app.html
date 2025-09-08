@@ -1,25 +1,50 @@
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen bg-[var(--mdui-color-surface)] text-[var(--mdui-color-on-surface)]">
   <mdui-top-app-bar class="sticky top-0 z-30">
     <mdui-button-icon href="/" icon="home" title="Home"></mdui-button-icon>
     <mdui-top-app-bar-title>Chronolens</mdui-top-app-bar-title>
 
-    <div class="ml-4 hidden md:flex gap-2">
+    <div class="ml-4 hidden md:flex gap-1">
       <mdui-button href="/home" variant="text">Home</mdui-button>
-      <mdui-button href="/dashboard" variant="text">Dashboard</mdui-button>
+      <mdui-button href="/dashboard" variant="text">Generate</mdui-button>
+      <mdui-button href="/history" variant="text">History</mdui-button>
       <mdui-button href="/about" variant="text">About</mdui-button>
     </div>
 
     <div class="mdui-top-app-bar-spacer"></div>
 
+    <mdui-button-icon icon="dark_mode" title="Toggle theme" click.trigger="document.documentElement.toggleAttribute('data-mdui-theme','dark')"></mdui-button-icon>
+
     <template if.bind="!auth.isLoggedIn">
-      <mdui-button variant="tonal" icon="login" click.trigger="auth.signInWithGoogle()">Sign in</mdui-button>
+      <mdui-button variant="filled" icon="login" class="ml-1" click.trigger="auth.signInWithGoogle()">Sign in</mdui-button>
     </template>
     <template if.bind="auth.isLoggedIn">
-      <mdui-button variant="tonal" icon="logout" click.trigger="auth.signOut()">Sign out</mdui-button>
+      <mdui-dropdown>
+        <mdui-button slot="trigger" variant="tonal" icon="account_circle">Account</mdui-button>
+        <mdui-menu>
+          <mdui-menu-item href="/dashboard" icon="dashboard">Generate</mdui-menu-item>
+          <mdui-menu-item href="/history" icon="history">History</mdui-menu-item>
+          <mdui-divider></mdui-divider>
+          <mdui-menu-item icon="logout" click.trigger="auth.signOut()">Sign out</mdui-menu-item>
+        </mdui-menu>
+      </mdui-dropdown>
     </template>
   </mdui-top-app-bar>
 
-  <main class="container mx-auto py-6 px-4">
-    <au-viewport class="min-h-[calc(100vh-8rem)]"></au-viewport>
+  <main class="mx-auto max-w-6xl px-4 py-6 space-y-4">
+    <mdui-card class="p-4 bg-[var(--mdui-color-surface-container)]">
+      <div class="flex items-center gap-2">
+        <mdui-icon name="camera" class="opacity-80"></mdui-icon>
+        <div>
+          <div class="font-semibold">Welcome to Chronolens</div>
+          <div class="text-sm opacity-70">Generate and explore visual edits with AI.</div>
+        </div>
+      </div>
+    </mdui-card>
+    <mdui-divider></mdui-divider>
+    <au-viewport class="min-h-[calc(100vh-12rem)] block"></au-viewport>
   </main>
+
+  <footer class="mt-10 py-6 text-center text-sm opacity-70">
+    © ${new Date().getFullYear()} Chronolens
+  </footer>
 </div>

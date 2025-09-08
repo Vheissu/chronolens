@@ -11,19 +11,12 @@ import {
   type User,
 } from 'firebase/auth';
 import { auth } from '../core/firebase';
-import { HttpClient, json } from '@aurelia/fetch-client';
+// no-op
 
 export const IAuth = DI.createInterface<Auth>('IAuth', x => x.singleton(Auth));
 export type IAuth = Auth;
 
 export class Auth {
-  private http = new HttpClient().configure(c => c.withBaseUrl((() => {
-    try {
-      const env = (import.meta as unknown as { env?: Record<string, string> }).env;
-      return env?.VITE_API_BASE || '/api';
-    } catch { return '/api'; }
-  })()));
-
   private user: User | null = null;
   private loggedIn = false;
 
@@ -36,7 +29,6 @@ export class Auth {
 
   setLoggedIn(): void {
     this.loggedIn = true;
-    this.ensureBilling().catch(() => { /* best-effort */ });
   }
 
   setLoggedOut(): void { this.loggedIn = false; }
@@ -71,14 +63,4 @@ export class Auth {
     await sendPasswordResetEmail(auth, email);
   }
 
-  async ensureBilling(): Promise<void> {
-    try {
-      const token = await this.getToken();
-      await this.http.fetch('/billing/ensure', {
-        method: 'POST',
-        headers: token?.token ? { 'Authorization': `Bearer ${token.token}` } : undefined,
-        body: json({}),
-      });
-    } catch { /* ignore */ }
-  }
 }

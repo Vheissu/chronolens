@@ -3,12 +3,15 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     function isSignedIn() { return request.auth != null; }
-    function sceneDoc(sceneId) { return get(/databases/(default)/documents/scenes/$(sceneId)); }
+    function sceneDoc(sceneId) { return firestore.get(/databases/(default)/documents/scenes/$(sceneId)); }
     function isOwnerOfScene(sceneId) { return isSignedIn() && sceneDoc(sceneId).data.ownerUid == request.auth.uid; }
     function isPublished(sceneId) { return sceneDoc(sceneId).data.public.isPublic == true; }
 
-    match /scenes/{sceneId}/original.{ext} {
-      allow read, write, delete: if isOwnerOfScene(sceneId);
+    // Match an object like: scenes/{sceneId}/original.<any-extension>
+    // Storage rules cannot capture part of a path segment (e.g., ".{ext}").
+    // Capture the whole filename and validate it with a regex.
+    match /scenes/{sceneId}/{filename} {
+      allow read, write, delete: if filename.matches('^original\\..+$') && isOwnerOfScene(sceneId);
     }
 
     match /scenes/{sceneId}/renders/{era}/{name=**} {

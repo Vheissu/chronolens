@@ -1,15 +1,60 @@
-<section class="space-y-6">
-  <mdui-card class="p-6">
-    <h2 class="text-2xl font-semibold mb-2">Dashboard</h2>
-    <p class="text-gray-600">You are signed in. Start experimenting with image transformations.</p>
+<section class="grid gap-4 md:grid-cols-3">
+  <mdui-card class="p-4 md:col-span-2 space-y-3">
+    <h2 class="text-xl font-semibold flex items-center gap-2">
+      <mdui-icon name="tune"></mdui-icon>
+      Generate
+    </h2>
+
+    <div class="grid gap-3 md:grid-cols-2">
+      <div class="space-y-2">
+        <div class="text-sm opacity-70">Source image</div>
+        <input type="file" accept="image/*" change.trigger="onPickSource($event)"/>
+        <template if.bind="sourcePreview">
+          <img class="rounded-lg max-h-48" src.bind="sourcePreview" alt="Source preview"/>
+        </template>
+      </div>
+
+      <div class="space-y-2">
+        <div class="text-sm opacity-70">Design overlays (up to 3)</div>
+        <input type="file" multiple accept="image/*" change.trigger="onPickDesigns($event)"/>
+        <div class="flex gap-2 flex-wrap">
+          <template repeat.for="d of designPreviews">
+            <img class="rounded-md h-20 w-20 object-cover border" src.bind="d"/>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <mdui-text-field label="Target (optional)" value.two-way="target"></mdui-text-field>
+    <mdui-text-field label="Instructions (optional)" value.two-way="instructions" type="textarea"></mdui-text-field>
+    <mdui-text-field label="Negatives (optional)" value.two-way="negatives" type="textarea"></mdui-text-field>
+
+    <div class="flex items-center gap-2">
+      <mdui-button variant="filled" icon="bolt" disabled.bind="busy || !sourceFile" click.trigger="generate()">Generate</mdui-button>
+      <template if.bind="busy">
+        <mdui-circular-progress indeterminate></mdui-circular-progress>
+      </template>
+    </div>
   </mdui-card>
 
-  <mdui-card class="p-6 space-y-4">
-    <h3 class="text-xl font-semibold">Try Gemini</h3>
-    <p class="text-gray-600">This is a placeholder. Hook up UI to IGemini as needed.</p>
-    <div class="flex gap-2">
-      <mdui-button variant="text" href="/about" icon="info">Docs</mdui-button>
-    </div>
+  <mdui-card class="p-4 space-y-3">
+    <h3 class="text-lg font-semibold flex items-center gap-2">
+      <mdui-icon name="image"></mdui-icon>
+      Result
+    </h3>
+    <template if.bind="resultImage">
+      <img class="rounded-lg w-full" src.bind="resultImage" alt="Result"/>
+      <div class="flex gap-2">
+        <mdui-button variant="tonal" icon="download" click.trigger="downloadResult()">Download</mdui-button>
+        <mdui-button variant="text" href="/history" icon="history">View History</mdui-button>
+      </div>
+    </template>
+    <template if.bind="resultText">
+      <mdui-text-field type="textarea" value.bind="resultText" readonly></mdui-text-field>
+    </template>
+    <template if.bind="!resultImage && !resultText">
+      <div class="text-sm opacity-70">No result yet</div>
+    </template>
   </mdui-card>
 </section>
 

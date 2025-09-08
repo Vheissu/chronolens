@@ -1,0 +1,30 @@
+<section class="space-y-4">
+  <mdui-card class="p-4">
+    <h2 class="text-xl font-semibold flex items-center gap-2">
+      <mdui-icon name="history"></mdui-icon>
+      History
+    </h2>
+  </mdui-card>
+
+  <div class="grid gap-4 md:grid-cols-3">
+    <template repeat.for="item of items">
+      <mdui-card class="p-3 space-y-2">
+        <template if.bind="item.resultType === 'image' && item.resultMimeType && item.resultData">
+          <img class="rounded-md w-full" src.bind="'data:' + item.resultMimeType + ';base64,' + item.resultData" alt="Result"/>
+        </template>
+        <template if.bind="item.resultType === 'text'">
+          <mdui-text-field type="textarea" value.bind="item.resultText" readonly></mdui-text-field>
+        </template>
+        <div class="text-xs opacity-70">
+          <div if.bind="item.instructions">${item.instructions}</div>
+          <div if.bind="item.createdAt">${item.createdAt.toDate().toLocaleString?.() || ''}</div>
+        </div>
+      </mdui-card>
+    </template>
+  </div>
+
+  <template if.bind="!items.length">
+    <mdui-card class="p-4 text-sm opacity-70">No history yet.</mdui-card>
+  </template>
+</section>
+
