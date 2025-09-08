@@ -1,17 +1,4 @@
-/**
- * ChronoLens Cloud Functions
- *
- * Implements callable API endpoints used by the client:
- * - analyzeScene(sceneId)
- * - renderEra(sceneId, era, variant, idempotencyKey)
- * - publishScene(sceneId)
- * - getQuota()
- *
- * Notes:
- * - Image generation/editing calls to Gemini are stubbed for now. Rendering
- *   writes a re-encoded copy of the original as a placeholder output so the
- *   app flow and Storage/Firestore wiring can be validated end-to-end.
- */
+ 
 
 import { setGlobalOptions } from "firebase-functions";
 import { onCall, onRequest, HttpsError } from "firebase-functions/v2/https";
@@ -26,17 +13,13 @@ import sharp from "sharp";
 import { GoogleGenAI, createUserContent, type Part } from "@google/genai";
 
 dotenv.config();
-
-// Function defaults
 setGlobalOptions({ maxInstances: 10, region: "us-central1" });
 
-// Admin SDK
 initializeApp();
 const db = getFirestore();
 try { (db as any).settings?.({ ignoreUndefinedProperties: true }); } catch {}
 const bucket = getStorage().bucket();
 
-// Gemini
 const DEFAULT_IMAGE_MODEL = (process.env.GEMINI_IMAGE_MODEL ?? "").trim() || "gemini-2.5-flash-image-preview";
 
 function getGenAI(): GoogleGenAI {
@@ -46,8 +29,6 @@ function getGenAI(): GoogleGenAI {
   }
   return new GoogleGenAI({ apiKey });
 }
-
-// ---------- Types ----------
 type Era = "1920" | "1970" | "2090";
 type Variant = "mild" | "balanced" | "cinematic";
 
@@ -63,8 +44,6 @@ interface SceneDoc {
   createdAt?: FirebaseFirestore.Timestamp;
   updatedAt?: FirebaseFirestore.Timestamp;
 }
-
-// ---------- Small utils ----------
 function assertString(value: unknown, name: string): asserts value is string {
   if (typeof value !== "string" || value.trim() === "") {
     throw new HttpsError("invalid-argument", `${name} must be a non-empty string`);
@@ -79,9 +58,9 @@ function assertAuth<T extends { auth?: { uid?: string | null } | null }>(req: T)
 
 function gsPathFromUri(gsUri?: string | null): string | null {
   if (!gsUri) return null;
-  if (!gsUri.startsWith("gs://")) return gsUri; // already a path
+  if (!gsUri.startsWith("gs://")) return gsUri;
   const [, , ...rest] = gsUri.split("/");
-  const path = rest.slice(1).join("/"); // drop bucket name
+  const path = rest.slice(1).join("/");
   return path || null;
 }
 
@@ -94,16 +73,12 @@ async function fileExists(path: string): Promise<boolean> {
   return !!exists;
 }
 
-// (sha256Hex helper not currently needed)
-
-// ---------- Quota (daily counter only) ----------
-// Daily limit depends on auth type: anonymous=10/day, authenticated=25/day
 function dailyLimitFromAuth(auth: any | undefined): number {
   const provider = auth?.token?.firebase?.sign_in_provider;
   return provider === "anonymous" ? 10 : 25;
 }
 
-const DAILY_TZ = "America/Los_Angeles"; // San Francisco time (handles DST)
+const DAILY_TZ = "America/Los_Angeles";
 function toSFDateString(d: Date): string {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: DAILY_TZ,
@@ -126,7 +101,6 @@ async function readDailyQuota(uid: string, dailyLimit: number): Promise<{ dailyR
     const dailyDate = (data.dailyDate as string) || toSFDateString(new Date(now));
     let dailyRequests = Number.isFinite(data.dailyRequests) ? Number(data.dailyRequests) : 0;
 
-    // Reset daily counter on date change (AEST)
     const today = toSFDateString(new Date(now));
     if (today !== dailyDate) {
       dailyRequests = 0;
@@ -179,7 +153,6 @@ async function chargeQuota(uid: string, cost: number, dailyLimit: number): Promi
   });
 }
 
-// ---------- Core data helpers ----------
 async function getSceneChecked(sceneId: string, uid: string): Promise<{ ref: FirebaseFirestore.DocumentReference; data: SceneDoc }>{
   const ref = db.collection("scenes").doc(sceneId);
   const snap = await ref.get();
@@ -190,8 +163,6 @@ async function getSceneChecked(sceneId: string, uid: string): Promise<{ ref: Fir
   }
   return { ref, data };
 }
-
-// Mask-free flow: no server writes to masks needed
 
 async function saveRender(
   sceneId: string,
@@ -244,7 +215,6 @@ async function saveRender(
   };
 }
 
-// ---------- Image + Prompt helpers ----------
 async function gsInlinePart(gsUri: string): Promise<Part> {
   const path = gsPathFromUri(gsUri);
   if (!path) throw new HttpsError("invalid-argument", "Invalid gs:// URI");
@@ -258,7 +228,6 @@ async function gsInlinePart(gsUri: string): Promise<Part> {
 function buildEraPrompt(era: Era, variant: Variant, negatives?: string): string {
   const intensity = variant === "mild" ? "20–30%" : variant === "balanced" ? "40–60%" : "70–90%";
   const lines: string[] = [];
-  // Narrative first: describe desired scene according to best practices
   lines.push("Using the provided street photo, transform the scene to be historically accurate for the requested era while matching the original camera, perspective, and lighting.");
   lines.push(`Overall intensity: ${variant} (${intensity} change), keeping the photo's identity intact.`);
   lines.push("Preserve completely: building geometry, curb lines, vanishing points, window spacing, camera viewpoint, and shadow direction. Do not change the time of day or weather.");
@@ -278,34 +247,14 @@ function buildEraPrompt(era: Era, variant: Variant, negatives?: string): string 
   if (negatives && negatives.trim().length) {
     lines.push(`Semantic negatives: ${negatives.trim()}`);
   }
-  // Simple step-by-step guidance
   lines.push("Steps: (1) Analyze the photo's lighting and materials. (2) Replace era-specific elements (signage, vehicles, materials) according to the target era. (3) Verify edges are clean and consistent with the photo's depth of field. (4) Ensure all preserved regions remain pixel-consistent.");
   lines.push("Output: a single edited image at the same resolution as the input.");
   return lines.join("\n");
 }
-
-// ---------- Callable Endpoints ----------
-
 export const getQuota = onCall(async (req) => {
   const uid = assertAuth(req);
   const q = await readDailyQuota(uid, dailyLimitFromAuth(req.auth));
   return q;
-});
-
-export const analyzeScene = onCall(async (req) => {
-  const uid = assertAuth(req);
-  const sceneId = (req.data?.sceneId as unknown);
-  assertString(sceneId, "sceneId");
-
-  const { ref, data } = await getSceneChecked(sceneId, uid);
-  if (!data?.original?.gsUri) {
-    throw new HttpsError("failed-precondition", "Scene is missing original image");
-  }
-
-  // Mask-free flow: no analyze step needed
-  await ref.set({ status: "ready", updatedAt: FieldValue.serverTimestamp() } as Partial<SceneDoc>, { merge: true });
-  logger.info("analyzeScene noop", { sceneId });
-  return { ok: true };
 });
 
 export const renderEra = onCall(async (req) => {
@@ -326,7 +275,6 @@ export const renderEra = onCall(async (req) => {
 
   const { ref, data } = await getSceneChecked(sceneId, uid);
 
-  // Idempotency: short-circuit if output already exists
   const outPath = joinPath("scenes", sceneId, "renders", eraVal, `${variantVal}.jpg`);
   if (await fileExists(outPath)) {
     const gsUri = `gs://${bucket.name}/${outPath}`;
@@ -336,14 +284,11 @@ export const renderEra = onCall(async (req) => {
     if (found) {
       return { ...found, cached: true };
     }
-    // If file exists but Firestore not updated, return a minimal reference
     return { gsUri, variant: variantVal, cached: true };
   }
 
-  // Charge quota: 1 unit per render
   await chargeQuota(uid, 1, dailyLimitFromAuth(req.auth));
 
-  // Compose Gemini request using original image and an era-specific prompt
   if (!data?.original?.gsUri) {
     throw new HttpsError("failed-precondition", "Scene is missing original image");
   }
@@ -371,7 +316,6 @@ export const renderEra = onCall(async (req) => {
   const rendered = await sharp(outBuf).jpeg({ quality: 96 }).toBuffer();
   const saved = await saveRender(sceneId, eraVal, variantVal, rendered, "image/jpeg");
 
-  // Update Firestore outputs
   const outputs = (data.outputs ?? ({} as any)) as NonNullable<SceneDoc["outputs"]>;
   const arr = Array.isArray(outputs?.[eraVal]) ? outputs![eraVal] : [];
   const record = { variant: variantVal, gsUri: saved.gsUri, width: saved.width, height: saved.height, sha256: saved.sha256 } as const;
@@ -393,7 +337,6 @@ export const publishScene = onCall(async (req) => {
 
   const { ref, data } = await getSceneChecked(sceneId, uid);
 
-  // Pick a cover: prefer balanced of first era with output
   const outputs = (data.outputs ?? ({} as any)) as NonNullable<SceneDoc["outputs"]>;
   const eras = (data.eras && data.eras.length ? data.eras : (["1920", "1970", "2090"] as Era[]));
   let coverRef: string | null = null;
@@ -405,13 +348,9 @@ export const publishScene = onCall(async (req) => {
       break;
     }
   }
-  if (!coverRef) {
-    // fallback to original
-    coverRef = data?.original?.gsUri || null;
-  }
+  if (!coverRef) coverRef = data?.original?.gsUri || null;
   if (!coverRef) throw new HttpsError("failed-precondition", "No image available to publish");
 
-  // Create thumbnails into /scenes/{sceneId}/thumbs/
   const srcPath = gsPathFromUri(coverRef)!;
   const [srcBuf] = await bucket.file(srcPath).download();
   const sizes = [1280, 720, 360];
