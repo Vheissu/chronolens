@@ -40,19 +40,57 @@
       Before / After
     </h3>
     <template if.bind="originalUrl || resultUrl">
-      <div class="relative w-full max-w-full overflow-hidden rounded-xl checker ring-1 ring-black/5">
-        <img class="block w-full" src.bind="originalUrl || ''" alt="Original"/>
-        <div class="absolute inset-0 pointer-events-none overflow-hidden" style.bind="'width: ' + compare + '%'">
-          <img class="w-full h-full object-contain" src.bind="resultUrl || ''" alt="Result"/>
-        </div>
+      <div class="relative w-full max-w-full overflow-hidden rounded-xl checker ring-1 ring-black/5 cursor-col-resize select-none"
+           pointerdown.trigger="onSliderStart($event)"
+           pointermove.trigger="onSliderMove($event)"
+           pointerup.trigger="onSliderEnd()"
+           pointerleave.trigger="onSliderEnd()">
+        <img class="block w-full select-none" src.bind="originalUrl || ''" alt="Original"/>
+        <img class="absolute top-0 left-0 w-full h-auto select-none" src.bind="resultUrl || ''" alt="Result"
+             style.bind="'clip-path: inset(0 ' + (100 - compare) + '% 0 0)'"/>
         <div class="absolute inset-y-0" style.bind="'left: ' + compare + '%'">
-          <div class="w-0.5 h-full bg-white/70 shadow"></div>
+          <div class="-translate-x-1/2 w-0.5 h-full bg-white/80 shadow"></div>
+          <div class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white shadow ring-1 ring-black/10"></div>
         </div>
       </div>
       <div class="flex items-center gap-2">
         <input type="range" min="0" max="100" value.two-way="compare" />
         <span class="text-xs opacity-70">${compare}%</span>
       </div>
+      <div class="flex gap-2">
+        <mdui-button variant="tonal" icon="zoom_in" click.trigger="openModal()">View larger</mdui-button>
+        <mdui-button variant="tonal" icon="download" click.trigger="downloadSelected()">Download</mdui-button>
+      </div>
+
+      <template if.bind="modalOpen">
+        <div class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" click.trigger="closeModal()">
+          <div class="relative w-full max-w-5xl" click.trigger="noop($event)">
+            <div class="relative w-full overflow-hidden rounded-xl checker ring-1 ring-black/20 cursor-col-resize"
+                 pointerdown.trigger="onSliderStart($event)"
+                 pointermove.trigger="onSliderMove($event)"
+                 pointerup.trigger="onSliderEnd()"
+                 pointerleave.trigger="onSliderEnd()">
+              <img class="block w-full select-none" src.bind="originalUrl || ''" alt="Original large"/>
+              <img class="absolute top-0 left-0 w-full h-auto select-none" src.bind="resultUrl || ''" alt="Result large"
+                   style.bind="'clip-path: inset(0 ' + (100 - compare) + '% 0 0)'"/>
+              <div class="absolute inset-y-0" style.bind="'left: ' + compare + '%'">
+                <div class="-translate-x-1/2 w-0.5 h-full bg-white/80 shadow"></div>
+                <div class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white shadow ring-1 ring-black/10"></div>
+              </div>
+            </div>
+            <div class="mt-3 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <input type="range" min="0" max="100" value.two-way="compare" />
+                <span class="text-xs opacity-70">${compare}%</span>
+              </div>
+              <div class="flex gap-2">
+                <mdui-button variant="tonal" icon="download" click.trigger="downloadSelected()">Download</mdui-button>
+                <mdui-button variant="filled" icon="close" click.trigger="closeModal()">Close</mdui-button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
     </template>
     <template if.bind="!originalUrl && !resultUrl">
       <div class="text-sm opacity-70">No images yet.</div>

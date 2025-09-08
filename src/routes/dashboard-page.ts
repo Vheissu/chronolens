@@ -33,6 +33,8 @@ export class DashboardPage {
   error: string | null = null;
   quota: QuotaInfo | null = null;
   compare = 50; // before/after slider percent
+  private dragging = false;
+  modalOpen = false;
 
   async attaching() {
     await this.refreshQuota();
@@ -117,6 +119,32 @@ export class DashboardPage {
     const filename = `chronolens-${this.sceneId}-${era}-${variant}.jpg`;
     const url = await this.scenes.downloadUrl(this.sceneId, era, variant, filename);
     window.open(url, '_blank');
+  }
+
+  openModal(): void { this.modalOpen = true; }
+  closeModal(): void { this.modalOpen = false; }
+  noop(ev: Event): void { ev.stopPropagation(); }
+
+  onSliderStart(ev: PointerEvent): void {
+    this.dragging = true;
+    this.updateCompareFromEvent(ev);
+  }
+
+  onSliderMove(ev: PointerEvent): void {
+    if (!this.dragging) return;
+    this.updateCompareFromEvent(ev);
+  }
+
+  onSliderEnd(): void {
+    this.dragging = false;
+  }
+
+  private updateCompareFromEvent(ev: PointerEvent): void {
+    const el = ev.currentTarget as HTMLElement | null;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = Math.min(Math.max(ev.clientX - rect.left, 0), rect.width);
+    this.compare = Math.round((x / rect.width) * 100);
   }
 
   private toDataUrl(file: File): Promise<string> {

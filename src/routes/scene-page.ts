@@ -20,6 +20,8 @@ export class ScenePage {
   resultUrl: string | null = null;
   publishing = false;
   publicUrl: string | null = null;
+  private dragging = false;
+  modalOpen = false;
 
   async load(params: Record<string, string>): Promise<void> {
     this.sceneId = params.id;
@@ -88,6 +90,45 @@ export class ScenePage {
       this.error = e instanceof Error ? e.message : 'Failed to publish scene';
     } finally {
       this.publishing = false;
+    }
+  }
+
+  openModal(): void { this.modalOpen = true; }
+  closeModal(): void { this.modalOpen = false; }
+  noop(ev: Event): void { ev.stopPropagation(); }
+
+  onSliderStart(ev: PointerEvent): void {
+    this.dragging = true;
+    this.updateCompareFromEvent(ev);
+  }
+
+  onSliderMove(ev: PointerEvent): void {
+    if (!this.dragging) return;
+    this.updateCompareFromEvent(ev);
+  }
+
+  onSliderEnd(): void {
+    this.dragging = false;
+  }
+
+  private updateCompareFromEvent(ev: PointerEvent): void {
+    const el = ev.currentTarget as HTMLElement | null;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = Math.min(Math.max(ev.clientX - rect.left, 0), rect.width);
+    this.compare = Math.round((x / rect.width) * 100);
+  }
+
+  async downloadSelected(): Promise<void> {
+    // Prefer result for download; fall back to original
+    if (this.resultUrl) {
+      const url = await this.scenes.renderUrl(this.sceneId, this.selectedEra, this.selectedVariant);
+      window.open(url, '_blank');
+      return;
+    }
+    if (this.originalUrl) {
+      const url = await this.scenes.originalUrl(this.sceneId);
+      window.open(url, '_blank');
     }
   }
 }
