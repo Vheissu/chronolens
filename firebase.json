@@ -21,6 +21,9 @@
       ]
     }
   ],
+  "storage": {
+    "rules": "storage.rules"
+  },
   "hosting": {
     "public": "dist",
     "ignore": [
@@ -29,10 +32,8 @@
       "**/node_modules/**"
     ],
     "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
+      { "source": "/api/health", "function": { "functionId": "health", "region": "us-central1" } },
+      { "source": "**", "destination": "/index.html" }
     ]
   },
   "emulators": {

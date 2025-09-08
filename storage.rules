@@ -1,0 +1,42 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() { return request.auth != null; }
+    function sceneDoc(sceneId) { return get(/databases/(default)/documents/scenes/$(sceneId)); }
+    function isOwnerOfScene(sceneId) {
+      return isSignedIn() && sceneDoc(sceneId).data.ownerUid == request.auth.uid;
+    }
+    function isPublished(sceneId) {
+      return sceneDoc(sceneId).data.public.isPublic == true;
+    }
+
+    // Original upload: owner-only read/write
+    match /scenes/{sceneId}/original.{ext} {
+      allow read, write, delete: if isOwnerOfScene(sceneId);
+    }
+
+    // Masks: owner-only read/write
+    match /scenes/{sceneId}/masks/{maskPath=**} {
+      allow read, write, delete: if isOwnerOfScene(sceneId);
+    }
+
+    // Renders: readable by owner or when published; writes are server-side only
+    match /scenes/{sceneId}/renders/{era}/{name=**} {
+      allow read: if isOwnerOfScene(sceneId) || isPublished(sceneId);
+      allow write, delete: if false;
+    }
+
+    // Thumbnails: same as renders
+    match /scenes/{sceneId}/thumbs/{name=**} {
+      allow read: if isOwnerOfScene(sceneId) || isPublished(sceneId);
+      allow write, delete: if false;
+    }
+
+    // Deny everything else by default
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

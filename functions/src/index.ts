@@ -220,12 +220,26 @@ async function saveRender(
   const mainPath = `${basePath}.jpg`;
   const previewPath = `${basePath}.preview.jpg`;
 
-  // Write main
-  await bucket.file(mainPath).save(imageBuffer, { contentType, public: false, resumable: false, validation: false });
+  // Write main with download token for client access
+  const mainToken = crypto.randomUUID();
+  await bucket.file(mainPath).save(imageBuffer, {
+    contentType,
+    public: false,
+    resumable: false,
+    validation: false,
+    metadata: { metadata: { firebaseStorageDownloadTokens: mainToken } },
+  });
 
   // Write preview (resize by width)
   const preview = await sharp(imageBuffer).resize({ width: previewMaxWidth, withoutEnlargement: true }).jpeg({ quality: 90 }).toBuffer();
-  await bucket.file(previewPath).save(preview, { contentType: "image/jpeg", public: false, resumable: false, validation: false });
+  const previewToken = crypto.randomUUID();
+  await bucket.file(previewPath).save(preview, {
+    contentType: "image/jpeg",
+    public: false,
+    resumable: false,
+    validation: false,
+    metadata: { metadata: { firebaseStorageDownloadTokens: previewToken } },
+  });
 
   return {
     gsUri: `gs://${bucket.name}/${mainPath}`,
@@ -415,7 +429,14 @@ export const publishScene = onCall(async (req) => {
     sizes.map(async (w) => {
       const buf = await sharp(srcBuf).resize({ width: w, withoutEnlargement: true }).jpeg({ quality: 88 }).toBuffer();
       const thumbPath = joinPath("scenes", sceneId, "thumbs", `${w}.jpg`);
-      await bucket.file(thumbPath).save(buf, { contentType: "image/jpeg", public: false, resumable: false, validation: false });
+      const token = crypto.randomUUID();
+      await bucket.file(thumbPath).save(buf, {
+        contentType: "image/jpeg",
+        public: false,
+        resumable: false,
+        validation: false,
+        metadata: { metadata: { firebaseStorageDownloadTokens: token } },
+      });
     })
   );
 
