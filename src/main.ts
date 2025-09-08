@@ -1,6 +1,7 @@
 import Aurelia from 'aurelia';
 import { RouterConfiguration } from '@aurelia/router';
 import { MyApp } from './my-app';
+import { AuthHook } from './core/auth-hook';
 import { MduiWebTask } from 'aurelia-mdui';
 // MDUI library (bundled, no CDN):
 import 'mdui/mdui.css';
@@ -11,6 +12,7 @@ import { IAuth } from './services/auth-service';
 Aurelia
   .register(
     RouterConfiguration.customize({ useUrlFragmentHash: false }),
+    AuthHook,
     MduiWebTask,
     IHttp,
     IAuth,

@@ -7,7 +7,9 @@
     <div class="ml-4 hidden md:flex gap-1">
       <mdui-button href="/home" variant="text">Home</mdui-button>
       <mdui-button href="/generate" variant="text">Generate</mdui-button>
-      <mdui-button href="/scenes" variant="text">Scenes</mdui-button>
+      <template if.bind="auth.isLoggedIn && !auth.isAnonymous">
+        <mdui-button href="/scenes" variant="text">Scenes</mdui-button>
+      </template>
       <mdui-button href="/about" variant="text">About</mdui-button>
     </div>
 
@@ -23,7 +25,9 @@
         <mdui-button slot="trigger" variant="tonal" icon="account_circle">Account</mdui-button>
         <mdui-menu>
           <mdui-menu-item href="/generate" icon="dashboard">Generate</mdui-menu-item>
-          <mdui-menu-item href="/scenes" icon="collections">Scenes</mdui-menu-item>
+          <template if.bind="!auth.isAnonymous">
+            <mdui-menu-item href="/scenes" icon="collections">Scenes</mdui-menu-item>
+          </template>
           <mdui-divider></mdui-divider>
           <mdui-menu-item icon="logout" click.trigger="auth.signOut()">Sign out</mdui-menu-item>
         </mdui-menu>

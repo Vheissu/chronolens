@@ -1,12 +1,10 @@
 import { IAuth } from '../services/auth-service';
 import { IRouter } from '@aurelia/router';
-import { AuthHook } from '../core/auth-hook';
 import { resolve } from 'aurelia';
 import { IScenes, type Era, type Variant } from '../services/scene-service';
 import { IQuota, type QuotaInfo } from '../services/quota-service';
 
 export class DashboardPage {
-  static dependencies = [AuthHook];
   public auth = resolve(IAuth);
   private get router() { return resolve(IRouter); }
   private scenes = resolve(IScenes);
