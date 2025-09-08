@@ -1,5 +1,5 @@
 import { resolve } from 'aurelia';
-import { collection, getDocs, limit, orderBy, query, type DocumentData } from 'firebase/firestore';
+import { collection, getDocs, limit, orderBy, query, startAfter, type DocumentData, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from '../core/firebase';
 import { IScenes, type Era, type Variant } from '../services/scene-service';
 
@@ -16,13 +16,23 @@ type GalleryItem = {
   sceneId: string;
   publicId: string;
   coverUrl?: string;
+  coverEra?: Era;
+  coverVariant?: Variant;
   createdAt?: Date;
 };
 
 export class GalleryPage {
   private scenes = resolve(IScenes);
 
+  // Loaded (unfiltered) items
   items: GalleryItem[] = [];
+  // Filters
+  filterEra: '' | Era = '';
+  filterVariant: '' | Variant = '';
+  // Pagination state
+  private lastDoc: QueryDocumentSnapshot<DocumentData> | null = null;
+  private pageSize = 24;
+  hasMore = false;
   busy = false;
   error: string | null = null;
 
@@ -30,11 +40,19 @@ export class GalleryPage {
     await this.load();
   }
 
-  async load(): Promise<void> {
-    this.busy = true; this.error = null; this.items = [];
+  get visibleItems(): GalleryItem[] {
+    return this.items.filter(it => (!this.filterEra || it.coverEra === this.filterEra) && (!this.filterVariant || it.coverVariant === this.filterVariant));
+  }
+
+  async load(reset = true): Promise<void> {
+    this.busy = true; this.error = null;
+    if (reset) { this.items = []; this.lastDoc = null; this.hasMore = false; }
     try {
       const col = collection(db, 'public');
-      const snap = await getDocs(query(col, orderBy('createdAt', 'desc'), limit(30)));
+      const q = this.lastDoc
+        ? query(col, orderBy('createdAt', 'desc'), startAfter(this.lastDoc), limit(this.pageSize))
+        : query(col, orderBy('createdAt', 'desc'), limit(this.pageSize));
+      const snap = await getDocs(q);
       const docs = snap.docs.map(d => {
         const data = d.data() as DocumentData;
         return {
@@ -56,13 +74,22 @@ export class GalleryPage {
         } else if (d.coverRef) {
           try { coverUrl = await this.scenes.urlFromGsUri(d.coverRef); } catch { /* ignore */ }
         }
-        out.push({ sceneId: d.sceneId, publicId: d.publicId, coverUrl, createdAt });
+        out.push({ sceneId: d.sceneId, publicId: d.publicId, coverUrl, createdAt, coverEra: d.coverEra, coverVariant: d.coverVariant });
       }
-      this.items = out;
+      this.items = reset ? out : [...this.items, ...out];
+      this.lastDoc = snap.docs.length ? snap.docs[snap.docs.length - 1] : this.lastDoc;
+      this.hasMore = snap.docs.length === this.pageSize;
     } catch (e) {
       this.error = e instanceof Error ? e.message : 'Failed to load gallery';
     } finally {
       this.busy = false;
     }
   }
+
+  async loadMore(): Promise<void> {
+    if (this.busy || !this.hasMore) return;
+    await this.load(false);
+  }
+
+  clearFilters(): void { this.filterEra = ''; this.filterVariant = ''; }
 }
