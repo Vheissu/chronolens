@@ -58,8 +58,7 @@ export class SceneService {
     type RenderEraInput = { sceneId: string; era: Era; variant: Variant; negatives?: string; style?: string; reroll?: boolean };
     const callable = httpsCallable<RenderEraInput, RenderRecord>(this.functions, 'renderEra');
     const record = await callable({ sceneId, era, variant, negatives, style, reroll }).then(r => r.data);
-    const path = this.gsUriToPath(record.gsUri);
-    const url = await getDownloadURL(storageRef(this.storage, path));
+    const url = `/api/scene/${sceneId}/${era}/${variant}.jpg?ts=${Date.now()}`;
     return { url, record };
   }
 
