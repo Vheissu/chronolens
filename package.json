@@ -12,7 +12,8 @@
     "@aurelia/router": "latest",
     "aurelia": "latest",
     "aurelia-mdui": "^0.0.2",
-    "firebase": "^12.2.1"
+    "firebase": "^12.2.1",
+    "mdui": "^2.1.4"
   },
   "devDependencies": {
     "@aurelia/testing": "latest",
