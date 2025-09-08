@@ -460,12 +460,16 @@ async function outputPathFor(sceneId: string, era: Era, variant: Variant): Promi
   return (await fileExists(path)) ? path : path; // path is canonical
 }
 
-async function getSigned(path: string, filename: string, attachment: boolean): Promise<string> {
+async function ensureToken(path: string): Promise<string> {
   const file = bucket.file(path);
-  const expires = Date.now() + 5 * 60 * 1000; // 5 minutes
-  const disposition = `${attachment ? 'attachment' : 'inline'}; filename="${filename}"`;
-  const [url] = await file.getSignedUrl({ version: 'v4', action: 'read', expires, responseDisposition: disposition });
-  return url;
+  try {
+    const [meta] = await file.getMetadata();
+    const token = (meta?.metadata?.firebaseStorageDownloadTokens as string) || '';
+    if (token) return token.split(',')[0];
+  } catch {/* ignore and set a new token */}
+  const newToken = crypto.randomUUID();
+  try { await file.setMetadata({ metadata: { firebaseStorageDownloadTokens: newToken } as any }); } catch {/* best-effort */}
+  return newToken;
 }
 
 async function findOriginalPath(sceneId: string): Promise<string> {
@@ -508,8 +512,8 @@ export const serveRender = onRequest(async (req: Request, res: Response) => {
     const scene = snap.data() as SceneDoc;
     assertAccess(scene, uid);
     const p = parsed.isOriginal ? await findOriginalPath(sceneId) : await outputPathFor(sceneId, parsed.era as Era, parsed.variant as Variant);
-    const filename = parsed.isOriginal ? `${sceneId}-original.jpg` : `${sceneId}-${parsed.era}-${parsed.variant}.jpg`;
-    const url = await getSigned(p, filename, false);
+    const token = await ensureToken(p);
+    const url = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(p)}?alt=media&token=${encodeURIComponent(token)}`;
     res.set('Cache-Control', 'private, max-age=60');
     res.set('X-Robots-Tag', 'noimageindex');
     res.redirect(302, url);
@@ -537,10 +541,16 @@ export const downloadRender = onRequest(async (req: Request, res: Response) => {
     const p = parsed.isOriginal ? await findOriginalPath(sceneId) : await outputPathFor(sceneId, parsed.era as Era, parsed.variant as Variant);
     const defName = parsed.isOriginal ? `chronolens-${sceneId}-original.jpg` : `chronolens-${sceneId}-${parsed.era}-${parsed.variant}.jpg`;
     const filename = (req.query?.filename as string) || defName;
-    const url = await getSigned(p, filename, true);
-    res.set('Cache-Control', 'private, max-age=60');
-    res.set('X-Robots-Tag', 'noimageindex');
-    res.redirect(302, url);
+    const file = bucket.file(p);
+    const [meta] = await file.getMetadata();
+    const contentType = (meta?.contentType as string) || 'application/octet-stream';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Cache-Control', 'private, max-age=60');
+    res.setHeader('X-Robots-Tag', 'noimageindex');
+    file.createReadStream()
+      .on('error', () => res.status(404).end())
+      .pipe(res);
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Error';
     res.status(400).json({ error: msg });

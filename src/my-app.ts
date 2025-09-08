@@ -1,6 +1,7 @@
 import { route } from '@aurelia/router';
 import { IAuth } from './services/auth-service';
 import { resolve } from 'aurelia';
+import { setTheme } from 'mdui';
 
 @route({
   routes: [
@@ -18,29 +19,24 @@ export class MyApp {
   public auth = resolve(IAuth);
 
   attaching() {
-    // Initialize theme (persisted)
+    // Initialize theme (persisted). Default: light.
     try {
       const saved = (localStorage.getItem('theme') || '').toLowerCase();
-      const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
-      const dark = saved ? saved === 'dark' : prefersDark;
+      const dark = saved === 'dark';
       this.applyTheme(dark);
     } catch { /* no-op */ }
   }
 
   toggleTheme() {
-    const isDark = document.documentElement.getAttribute('data-mdui-theme') === 'dark';
+    const isDark = document.documentElement.classList.contains('mdui-theme-dark');
     const next = !isDark;
     this.applyTheme(next);
     try { localStorage.setItem('theme', next ? 'dark' : 'light'); } catch { /* ignore */ }
   }
 
   private applyTheme(dark: boolean) {
-    if (dark) {
-      document.documentElement.setAttribute('data-mdui-theme', 'dark');
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.removeAttribute('data-mdui-theme');
-      document.documentElement.classList.remove('dark');
-    }
+    // Apply to <html> using MDUI's API and also Tailwind's dark class
+    setTheme(dark ? 'dark' : 'light');
+    document.documentElement.classList.toggle('dark', dark);
   }
 }
