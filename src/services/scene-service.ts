@@ -1,5 +1,6 @@
 import { DI } from '@aurelia/kernel';
 import { addDoc, collection, doc, serverTimestamp, updateDoc, type FieldValue } from 'firebase/firestore';
+import { getDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, db } from '../core/firebase';
@@ -71,6 +72,17 @@ export class SceneService {
   async urlFromGsUri(gsUri: string): Promise<string> {
     const path = this.gsUriToPath(gsUri);
     return getDownloadURL(storageRef(this.storage, path));
+  }
+
+  async getScene(sceneId: string): Promise<any | null> {
+    const d = await getDoc(doc(db, 'scenes', sceneId));
+    return d.exists() ? { id: d.id, ...d.data() } : null;
+  }
+
+  async publishScene(sceneId: string): Promise<{ publicId: string }>{
+    const callable = httpsCallable<{ sceneId: string }, { publicId: string }>(this.functions, 'publishScene');
+    const res = await callable({ sceneId });
+    return res.data;
   }
 
   private readImageSize(file: File): Promise<{ width: number; height: number }>{
