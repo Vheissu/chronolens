@@ -23,7 +23,7 @@ export class ScenePage {
   private dragging = false;
   modalOpen = false;
 
-  async load(params: Record<string, string>): Promise<void> {
+  async loading(params: Record<string, string>): Promise<void> {
     this.sceneId = params.id;
   }
 
