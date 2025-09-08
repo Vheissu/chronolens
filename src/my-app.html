@@ -1,4 +1,5 @@
-<div class="min-h-screen bg-[var(--mdui-color-surface)] text-[var(--mdui-color-on-surface)]">
+<div class="relative min-h-screen bg-[var(--mdui-color-surface)] text-[var(--mdui-color-on-surface)] app-grid">
+  <div class="app-decor"></div>
   <mdui-top-app-bar class="sticky top-0 z-30">
     <mdui-button-icon href="/" icon="home" title="Home"></mdui-button-icon>
     <mdui-top-app-bar-title>Chronolens</mdui-top-app-bar-title>
@@ -12,7 +13,7 @@
 
     <div class="mdui-top-app-bar-spacer"></div>
 
-    <mdui-button-icon icon="dark_mode" title="Toggle theme" click.trigger="document.documentElement.toggleAttribute('data-mdui-theme','dark')"></mdui-button-icon>
+    <mdui-button-icon icon="dark_mode" title="Toggle theme" click.trigger="toggleTheme()"></mdui-button-icon>
 
     <template if.bind="!auth.isLoggedIn">
       <mdui-button variant="filled" icon="login" class="ml-1" click.trigger="auth.signInWithGoogle()">Sign in (25/day)</mdui-button>
@@ -30,17 +31,24 @@
     </template>
   </mdui-top-app-bar>
 
-  <main class="mx-auto max-w-6xl px-4 py-6 space-y-4">
-    <mdui-card class="p-4 bg-[var(--mdui-color-surface-container)]">
-      <div class="flex items-center gap-2">
-        <mdui-icon name="camera" class="opacity-80"></mdui-icon>
-        <div>
-          <div class="font-semibold">Welcome to Chronolens</div>
-          <div class="text-sm opacity-70">Upload a photo and change its era with AI.</div>
+  <main class="relative mx-auto max-w-7xl px-4 py-6 space-y-5">
+    <mdui-card class="glass p-6 overflow-hidden">
+      <div class="flex flex-col md:flex-row md:items-center gap-4">
+        <div class="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-white"
+             style="background: linear-gradient(135deg, rgb(var(--brand-1)), rgb(var(--brand-2)));">
+          <mdui-icon name="camera" class="opacity-95"></mdui-icon>
+        </div>
+        <div class="flex-1">
+          <div class="font-semibold text-lg">Welcome to Chronolens</div>
+          <div class="text-sm opacity-75">Transform photos into different eras with vivid, film‑inspired styles.</div>
+        </div>
+        <div class="flex gap-2">
+          <mdui-button href="/generate" variant="filled" icon="bolt">Start Generating</mdui-button>
+          <mdui-button href="/about" variant="tonal" icon="info">About</mdui-button>
         </div>
       </div>
     </mdui-card>
-    <mdui-divider></mdui-divider>
+
     <au-viewport class="min-h-[calc(100vh-12rem)] block"></au-viewport>
   </main>
 
