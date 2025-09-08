@@ -7,7 +7,7 @@
 
     <div class="grid gap-3 md:grid-cols-2">
       <div class="space-y-2">
-        <div class="text-sm opacity-70">Source image</div>
+        <div class="text-sm opacity-70">Upload photo</div>
         <input type="file" accept="image/*" change.trigger="onPickSource($event)"/>
         <template if.bind="sourcePreview">
           <img class="rounded-lg max-h-48" src.bind="sourcePreview" alt="Source preview"/>
@@ -15,24 +15,30 @@
       </div>
 
       <div class="space-y-2">
-        <div class="text-sm opacity-70">Design overlays (up to 3)</div>
-        <input type="file" multiple accept="image/*" change.trigger="onPickDesigns($event)"/>
-        <div class="flex gap-2 flex-wrap">
-          <template repeat.for="d of designPreviews">
-            <img class="rounded-md h-20 w-20 object-cover border" src.bind="d"/>
-          </template>
+        <div class="text-sm opacity-70">Era and intensity</div>
+        <div class="flex gap-2 items-center">
+          <mdui-select label="Era" value.two-way="era">
+            <mdui-menu-item value="1920">1920</mdui-menu-item>
+            <mdui-menu-item value="1970">1970</mdui-menu-item>
+            <mdui-menu-item value="2090">2090</mdui-menu-item>
+          </mdui-select>
+          <mdui-select label="Intensity" value.two-way="variant">
+            <mdui-menu-item value="mild">Mild</mdui-menu-item>
+            <mdui-menu-item value="balanced">Balanced</mdui-menu-item>
+            <mdui-menu-item value="cinematic">Cinematic</mdui-menu-item>
+          </mdui-select>
         </div>
+        <mdui-text-field label="Negatives (optional)" value.two-way="negatives" type="textarea"></mdui-text-field>
       </div>
     </div>
-
-    <mdui-text-field label="Target (optional)" value.two-way="target"></mdui-text-field>
-    <mdui-text-field label="Instructions (optional)" value.two-way="instructions" type="textarea"></mdui-text-field>
-    <mdui-text-field label="Negatives (optional)" value.two-way="negatives" type="textarea"></mdui-text-field>
 
     <div class="flex items-center gap-2">
       <mdui-button variant="filled" icon="bolt" disabled.bind="busy || !sourceFile" click.trigger="generate()">Generate</mdui-button>
       <template if.bind="busy">
         <mdui-circular-progress indeterminate></mdui-circular-progress>
+      </template>
+      <template if.bind="error">
+        <div class="text-sm text-red-600">${error}</div>
       </template>
     </div>
   </mdui-card>
@@ -46,15 +52,10 @@
       <img class="rounded-lg w-full" src.bind="resultImage" alt="Result"/>
       <div class="flex gap-2">
         <mdui-button variant="tonal" icon="download" click.trigger="downloadResult()">Download</mdui-button>
-        <mdui-button variant="text" href="/history" icon="history">View History</mdui-button>
       </div>
     </template>
-    <template if.bind="resultText">
-      <mdui-text-field type="textarea" value.bind="resultText" readonly></mdui-text-field>
-    </template>
-    <template if.bind="!resultImage && !resultText">
+    <template if.bind="!resultImage">
       <div class="text-sm opacity-70">No result yet</div>
     </template>
   </mdui-card>
 </section>
-

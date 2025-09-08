@@ -1,16 +1,14 @@
 import { IAuth } from '../services/auth-service';
 import { IRouter } from '@aurelia/router';
 import { AuthHook } from '../core/auth-hook';
-import { IGemini } from '../services/gemini-service';
-import { IHistory } from '../services/history-service';
 import { resolve } from 'aurelia';
+import { IScenes, type Era, type Variant } from '../services/scene-service';
 
 export class DashboardPage {
   static dependencies = [AuthHook];
   private auth = resolve(IAuth);
-  private router = resolve(IRouter);
-  private gemini = resolve(IGemini);
-  private history = resolve(IHistory);
+  private get router() { return resolve(IRouter); }
+  private scenes = resolve(IScenes);
 
   async canLoad(): Promise<boolean> {
     if (!this.auth.isLoggedIn) {
@@ -23,14 +21,13 @@ export class DashboardPage {
   // UI state
   sourceFile: File | null = null;
   sourcePreview: string | null = null;
-  designFiles: File[] = [];
-  designPreviews: string[] = [];
-  instructions = '';
+  era: Era = '1920';
+  variant: Variant = 'balanced';
   negatives = '';
-  target = '';
   busy = false;
+  sceneId: string | null = null;
   resultImage: string | null = null;
-  resultText: string | null = null;
+  error: string | null = null;
 
   async onPickSource(ev: Event): Promise<void> {
     const input = ev.target as HTMLInputElement;
@@ -39,31 +36,25 @@ export class DashboardPage {
     this.sourcePreview = file ? await this.toDataUrl(file) : null;
   }
 
-  async onPickDesigns(ev: Event): Promise<void> {
-    const input = ev.target as HTMLInputElement;
-    const files = input.files ? Array.from(input.files).slice(0, 3) : [];
-    this.designFiles = files;
-    this.designPreviews = await Promise.all(files.map(f => this.toDataUrl(f)));
-  }
-
   async generate(): Promise<void> {
     if (!this.sourceFile) return;
     this.busy = true;
-    this.resultImage = null; this.resultText = null;
+    this.error = null;
+    this.resultImage = null;
     try {
-      const sourceImage = await this.gemini.fileToInline(this.sourceFile);
-      const designs = await Promise.all(this.designFiles.map(f => this.gemini.fileToInline(f)));
-      const resp = await this.gemini.applyTattoo({ sourceImage, designs, target: this.target || undefined, instructions: this.instructions || undefined, negatives: this.negatives || undefined });
-      if (resp.result.type === 'image' && resp.result.mimeType && resp.result.data) {
-        this.resultImage = `data:${resp.result.mimeType};base64,${resp.result.data}`;
-        await this.history.add({ resultType: 'image', resultMimeType: resp.result.mimeType, resultData: resp.result.data, target: this.target, instructions: this.instructions });
-      } else if (resp.result.type === 'text' && resp.result.text) {
-        this.resultText = resp.result.text;
-        await this.history.add({ resultType: 'text', resultText: resp.result.text, target: this.target, instructions: this.instructions });
+      // Create a new scene if needed
+      if (!this.sceneId) {
+        this.sceneId = await this.scenes.createScene();
       }
-    } catch (e) {
-      // Surface minimal error via console; production could use snackbar
+      // Upload original and attach metadata
+      const { path, width, height } = await this.scenes.uploadOriginal(this.sceneId, this.sourceFile);
+      await this.scenes.setOriginalMeta(this.sceneId, path, width, height);
+      // Render selected era/variant
+      const { url } = await this.scenes.renderEra(this.sceneId, this.era, this.variant, this.negatives || undefined);
+      this.resultImage = url;
+    } catch (e: unknown) {
       console.error(e);
+      this.error = this.errMsg(e);
     } finally {
       this.busy = false;
     }
@@ -85,5 +76,10 @@ export class DashboardPage {
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
+  }
+
+  private errMsg(err: unknown): string {
+    if (err instanceof Error && typeof err.message === 'string') return err.message;
+    try { return String(err); } catch { return 'Failed to generate image'; }
   }
 }
