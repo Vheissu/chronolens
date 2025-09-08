@@ -18,21 +18,28 @@
 
     <mdui-button-icon icon="dark_mode" title="Toggle theme" click.trigger="toggleTheme()"></mdui-button-icon>
 
-    <template if.bind="!auth.isLoggedIn">
-      <mdui-button variant="filled" icon="login" class="ml-1" click.trigger="auth.signInWithGoogle()">Sign in (25/day)</mdui-button>
+    <!-- Auth UI: render only after auth.isReady to avoid flicker -->
+    <template if.bind="auth.isReady">
+      <template if.bind="!auth.isLoggedIn">
+        <mdui-button variant="filled" icon="login" class="ml-1" click.trigger="auth.signInWithGoogle()">Sign in (25/day)</mdui-button>
+      </template>
+      <template if.bind="auth.isLoggedIn">
+        <mdui-dropdown>
+          <mdui-button slot="trigger" variant="tonal" icon="account_circle">Account</mdui-button>
+          <mdui-menu>
+            <mdui-menu-item href="/generate" icon="dashboard">Generate</mdui-menu-item>
+            <template if.bind="!auth.isAnonymous">
+              <mdui-menu-item href="/scenes" icon="collections">Scenes</mdui-menu-item>
+            </template>
+            <mdui-divider></mdui-divider>
+            <mdui-menu-item icon="logout" click.trigger="auth.signOut()">Sign out</mdui-menu-item>
+          </mdui-menu>
+        </mdui-dropdown>
+      </template>
     </template>
-    <template if.bind="auth.isLoggedIn">
-      <mdui-dropdown>
-        <mdui-button slot="trigger" variant="tonal" icon="account_circle">Account</mdui-button>
-        <mdui-menu>
-          <mdui-menu-item href="/generate" icon="dashboard">Generate</mdui-menu-item>
-          <template if.bind="!auth.isAnonymous">
-            <mdui-menu-item href="/scenes" icon="collections">Scenes</mdui-menu-item>
-          </template>
-          <mdui-divider></mdui-divider>
-          <mdui-menu-item icon="logout" click.trigger="auth.signOut()">Sign out</mdui-menu-item>
-        </mdui-menu>
-      </mdui-dropdown>
+    <template if.bind="!auth.isReady">
+      <!-- Keep layout stable while auth initializes -->
+      <div class="ml-1 w-[160px] h-9"></div>
     </template>
   </mdui-top-app-bar>
 

@@ -21,16 +21,37 @@ export class Auth {
   private user: User | null = null;
   private loggedIn = false;
   private triedAnonymous = false;
+  // Exposed to views to avoid flicker until auth settles
+  public isReady = false;
 
   constructor() {
-    onAuthStateChanged(auth, (u) => {
+    onAuthStateChanged(auth, async (u) => {
       this.user = u;
-      if (u) this.setLoggedIn(); else this.setLoggedOut();
-      if (!u && !this.triedAnonymous) {
-        // Seamless guest access for hackathon demo
-        this.triedAnonymous = true;
-        try { void signInAnonymously(auth); } catch { /* ignore */ }
+      if (u) {
+        // We have a user (persisted or just created anonymously)
+        this.setLoggedIn();
+        this.isReady = true;
+        return;
       }
+
+      // No user yet: attempt seamless anonymous sign-in once.
+      if (!this.triedAnonymous) {
+        this.triedAnonymous = true;
+        try {
+          await signInAnonymously(auth);
+          // Wait for the next onAuthStateChanged emission to set isReady.
+          return;
+        } catch {
+          // If anonymous sign-in fails (e.g., offline / rules), consider auth settled.
+          this.setLoggedOut();
+          this.isReady = true;
+          return;
+        }
+      }
+
+      // Already tried anonymous and still no user: mark as settled to avoid indefinite loading.
+      this.setLoggedOut();
+      this.isReady = true;
     });
   }
 
