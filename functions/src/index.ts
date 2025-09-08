@@ -261,14 +261,15 @@ async function gsInlinePart(gsUri: string): Promise<Part> {
   return { inlineData: { data: buffer.toString("base64"), mimeType: mime } } as Part;
 }
 
-function buildEraPrompt(era: Era, variant: Variant, hasMasks: boolean): string {
+function buildEraPrompt(era: Era, variant: Variant, hasMasks: boolean, negatives?: string): string {
   const intensity = variant === "mild" ? "20–30%" : variant === "balanced" ? "40–60%" : "70–90%";
   const lines: string[] = [];
-  lines.push("Task: Edit the provided street photo to reflect the requested historical era while preserving the scene's geometry and masked subjects.");
-  lines.push(`Intensity: ${variant} (${intensity} overall change).`);
-  lines.push("Preserve: perspective, curb lines, vanishing points, window spacing, shadow direction, weather, time of day.");
+  // Narrative first: describe desired scene according to best practices
+  lines.push("Using the provided street photo, transform the scene to be historically accurate for the requested era while matching the original camera, perspective, and lighting.");
+  lines.push(`Overall intensity: ${variant} (${intensity} change), keeping the photo's identity intact.`);
+  lines.push("Preserve completely: building geometry, curb lines, vanishing points, window spacing, camera viewpoint, and shadow direction. Do not change the time of day or weather.");
   if (hasMasks) {
-    lines.push("Important: The masked regions represent subjects to KEEP. Do not alter pixels inside masked areas.");
+    lines.push("There is a companion black/white mask image: white = subjects to KEEP unchanged; black = regions that may be edited. Do not alter any white areas.");
   } else {
     lines.push("Important: Keep human subjects unchanged. Avoid altering people or pets.");
   }
@@ -283,9 +284,48 @@ function buildEraPrompt(era: Era, variant: Variant, hasMasks: boolean): string {
       lines.push("Era 2090: composite/self-healing materials with soft patina; subtle display surfaces; transit infrastructure; e-micromobility lanes; holographic signage; preserve street width/perspective.");
       break;
   }
-  lines.push("Constraints: avoid warping buildings; no unrealistic artifacts; keep camera viewpoint; no added people; no watermarks or text overlays.");
-  lines.push("Output: a single edited image at the same resolution as the input. Focus changes on materials, signage, vehicles, and infrastructure relevant to the era.");
+  lines.push("Constraints: avoid warping buildings or perspective; do not invent new people; avoid text overlays or watermarks; keep grain/texture consistent with the source.");
+  if (negatives && negatives.trim().length) {
+    lines.push(`Semantic negatives: ${negatives.trim()}`);
+  }
+  // Simple step-by-step guidance
+  lines.push("Steps: (1) Analyze the photo's lighting and materials. (2) Replace era-specific elements (signage, vehicles, materials) according to the target era. (3) Verify edges are clean and consistent with the photo's depth of field. (4) Ensure all preserved regions remain pixel-consistent.");
+  lines.push("Output: a single edited image at the same resolution as the input.");
   return lines.join("\n");
+}
+
+async function buildUnionMaskPartIfAny(scene: SceneDoc): Promise<Part | null> {
+  const masks = Array.isArray(scene.masks) ? scene.masks : [];
+  if (masks.length === 0) return null;
+  try {
+    // Load first mask to get dimensions
+    const firstPath = gsPathFromUri(masks[0].gsUri);
+    if (!firstPath) return null;
+    const [firstBuf] = await bucket.file(firstPath).download();
+    const meta = await sharp(firstBuf).metadata();
+    const width = meta.width || 0;
+    const height = meta.height || 0;
+    if (!width || !height) return null;
+
+    // Prepare a union by repeatedly lightening over a black canvas
+    const prepared: Buffer[] = [];
+    for (const m of masks) {
+      const p = gsPathFromUri(m.gsUri);
+      if (!p) continue;
+      const [buf] = await bucket.file(p).download();
+      const bin = await sharp(buf).removeAlpha().greyscale().threshold(1).toColourspace('b-w').toBuffer();
+      prepared.push(bin);
+    }
+    if (prepared.length === 0) return null;
+    let pipeline = sharp(prepared[0]);
+    for (let i = 1; i < prepared.length; i++) {
+      pipeline = pipeline.composite([{ input: prepared[i], blend: 'lighten' }]);
+    }
+    const union = await pipeline.png().toBuffer();
+    return { inlineData: { data: union.toString('base64'), mimeType: 'image/png' } } as Part;
+  } catch {
+    return null; // mask building is best-effort; don't fail generation on mask issues
+  }
 }
 
 // ---------- Callable Endpoints ----------
@@ -361,11 +401,18 @@ export const renderEra = onCall(async (req) => {
   const modelId = DEFAULT_IMAGE_MODEL;
   const ai = getGenAI();
   const hasMasks = Array.isArray(data?.masks) && data!.masks!.length > 0;
-  const prompt = buildEraPrompt(eraVal, variantVal, hasMasks);
-  const contents = createUserContent([
+  const negatives = typeof req.data?.negatives === 'string' ? String(req.data.negatives) : undefined;
+  const prompt = buildEraPrompt(eraVal, variantVal, hasMasks, negatives);
+  const inputParts: any[] = [
     prompt,
     await gsInlinePart(data.original.gsUri),
-  ]);
+  ];
+  const maskPart = await buildUnionMaskPartIfAny(data);
+  if (maskPart) {
+    inputParts.push("Reference mask: white = preserve, black = editable.");
+    inputParts.push(maskPart);
+  }
+  const contents = createUserContent(inputParts);
 
   const response = await ai.models.generateContent({ model: modelId, contents });
   const cand = response.candidates?.[0];
