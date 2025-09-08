@@ -17,8 +17,11 @@ export class PublicPage {
     try {
       const snap = await getDoc(doc(db, 'public', this.publicId));
       if (!snap.exists()) { this.error = 'Not found'; return; }
-      const data = snap.data() as { coverRef?: string };
-      if (data && data.coverRef) {
+      const data = snap.data() as { coverRef?: string; coverEra?: string; coverVariant?: string; sceneId?: string };
+      if (data?.sceneId && data?.coverEra && data?.coverVariant) {
+        this.coverUrl = `/api/scene/${data.sceneId}/${data.coverEra}/${data.coverVariant}.jpg`;
+      } else if (data?.coverRef && data?.sceneId) {
+        // Fallback for older published docs: try to show with original gsUri method
         try { this.coverUrl = await this.scenes.urlFromGsUri(data.coverRef); } catch { /* ignore */ }
       }
     } catch (e) {

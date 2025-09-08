@@ -359,11 +359,16 @@ export const publishScene = onCall(async (req) => {
   const outputs = (data.outputs ?? ({} as any)) as NonNullable<SceneDoc["outputs"]>;
   const eras = (data.eras && data.eras.length ? data.eras : (["1890","1920","1940","1970","1980","1990","2000","2010","2090"] as Era[]));
   let coverRef: string | null = null;
+  let coverEra: Era | null = null;
+  let coverVariant: Variant | null = null;
   for (const e of eras) {
     const arr = outputs[e];
     if (arr && arr.length) {
       const bal = arr.find((x) => x.variant === "balanced");
-      coverRef = (bal || arr[0]).gsUri;
+      const chosen = (bal || arr[0]);
+      coverRef = chosen.gsUri;
+      coverEra = e;
+      coverVariant = chosen.variant as Variant;
       break;
     }
   }
@@ -392,6 +397,8 @@ export const publishScene = onCall(async (req) => {
   await db.collection("public").doc(publicId).set({
     sceneId,
     coverRef: coverRef,
+    coverEra: coverEra,
+    coverVariant: coverVariant,
     eraDefault: eras[0] || "1920",
     viewCount: 0,
     createdAt: FieldValue.serverTimestamp(),
