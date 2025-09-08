@@ -5,7 +5,7 @@
 
     <div class="ml-4 hidden md:flex gap-1">
       <mdui-button href="/home" variant="text">Home</mdui-button>
-      <mdui-button href="/dashboard" variant="text">Generate</mdui-button>
+      <mdui-button href="/generate" variant="text">Generate</mdui-button>
       <mdui-button href="/scenes" variant="text">Scenes</mdui-button>
       <mdui-button href="/about" variant="text">About</mdui-button>
     </div>
@@ -15,13 +15,13 @@
     <mdui-button-icon icon="dark_mode" title="Toggle theme" click.trigger="document.documentElement.toggleAttribute('data-mdui-theme','dark')"></mdui-button-icon>
 
     <template if.bind="!auth.isLoggedIn">
-      <mdui-button variant="filled" icon="login" class="ml-1" click.trigger="auth.signInWithGoogle()">Sign in</mdui-button>
+      <mdui-button variant="filled" icon="login" class="ml-1" click.trigger="auth.signInWithGoogle()">Sign in (25/day)</mdui-button>
     </template>
     <template if.bind="auth.isLoggedIn">
       <mdui-dropdown>
         <mdui-button slot="trigger" variant="tonal" icon="account_circle">Account</mdui-button>
         <mdui-menu>
-          <mdui-menu-item href="/dashboard" icon="dashboard">Generate</mdui-menu-item>
+          <mdui-menu-item href="/generate" icon="dashboard">Generate</mdui-menu-item>
           <mdui-menu-item href="/scenes" icon="collections">Scenes</mdui-menu-item>
           <mdui-divider></mdui-divider>
           <mdui-menu-item icon="logout" click.trigger="auth.signOut()">Sign out</mdui-menu-item>

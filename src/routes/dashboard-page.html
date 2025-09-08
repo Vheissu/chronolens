@@ -45,6 +45,9 @@
           <mdui-menu-item value="Sepia tone and paper texture">Sepia 1900s</mdui-menu-item>
         </mdui-select>
         <mdui-text-field label="Negatives (optional)" value.two-way="negatives" type="textarea"></mdui-text-field>
+        <div class="flex gap-2">
+          <mdui-button variant="tonal" icon="shuffle" click.trigger="randomize()">Surprise me</mdui-button>
+        </div>
       </div>
     </div>
 
@@ -56,6 +59,12 @@
       <template if.bind="error">
         <div class="text-sm text-red-600">${error}</div>
       </template>
+      <template if.bind="quota">
+        <mdui-chip clickable="false" class="text-sm">
+          <mdui-icon name="bolt" slot="icon"></mdui-icon>
+          ${quota.dailyRequests} / ${quota.dailyLimit} today ${auth.isAnonymous ? '(Guest)' : ''}
+        </mdui-chip>
+      </template>
     </div>
   </mdui-card>
 
@@ -65,8 +74,21 @@
       Result
     </h3>
     <template if.bind="resultImage">
-      <img class="rounded-lg w-full" src.bind="resultImage" alt="Result"/>
+      <div class="relative w-full max-w-full overflow-hidden rounded-lg border">
+        <img class="block w-full" src.bind="sourcePreview || ''" alt="Original"/>
+        <div class="absolute inset-0 pointer-events-none overflow-hidden" style.bind="'width: ' + compare + '%'">
+          <img class="w-full h-full object-contain" src.bind="resultImage" alt="Result"/>
+        </div>
+        <div class="absolute inset-y-0" style.bind="'left: ' + compare + '%'">
+          <div class="w-0.5 h-full bg-white/70 shadow"></div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <input type="range" min="0" max="100" value.two-way="compare" />
+        <span class="text-xs opacity-70">${compare}%</span>
+      </div>
       <div class="flex gap-2">
+        <mdui-button variant="tonal" icon="autorenew" disabled.bind="busy || !sceneId" click.trigger="reroll()">Reroll</mdui-button>
         <mdui-button variant="tonal" icon="download" click.trigger="downloadResult()">Download</mdui-button>
       </div>
     </template>

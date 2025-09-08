@@ -3,6 +3,7 @@ import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  signInAnonymously,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -19,11 +20,17 @@ export type IAuth = Auth;
 export class Auth {
   private user: User | null = null;
   private loggedIn = false;
+  private triedAnonymous = false;
 
   constructor() {
     onAuthStateChanged(auth, (u) => {
       this.user = u;
       if (u) this.setLoggedIn(); else this.setLoggedOut();
+      if (!u && !this.triedAnonymous) {
+        // Seamless guest access for hackathon demo
+        this.triedAnonymous = true;
+        try { void signInAnonymously(auth); } catch { /* ignore */ }
+      }
     });
   }
 
@@ -35,6 +42,7 @@ export class Auth {
 
   get isLoggedIn(): boolean { return this.loggedIn; }
   get currentUser(): User | null { return auth.currentUser; }
+  get isAnonymous(): boolean { return !!auth.currentUser?.isAnonymous; }
 
   async getToken(): Promise<IdTokenResult | undefined> {
     return auth.currentUser?.getIdTokenResult(true);

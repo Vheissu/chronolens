@@ -1,18 +1,24 @@
-<div class="bg-white rounded-lg shadow p-6">
-  <h1 class="text-3xl font-bold text-gray-900 mb-4">About</h1>
-  <div class="prose prose-blue max-w-none">
-    <p class="text-gray-600 leading-relaxed">
-      This is a sample Aurelia application showcasing the integration of TailwindCSS with the Aurelia framework.
-      The combination provides a powerful development experience with utility-first CSS styling.
-    </p>
-    <div class="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-      <h3 class="text-lg font-semibold text-blue-900 mb-2">Features</h3>
-      <ul class="text-blue-800 space-y-1">
-        <li>• Aurelia 2 with modern web standards</li>
-        <li>• TailwindCSS for utility-first styling</li>
-        <li>• Responsive design out of the box</li>
-        <li>• Fast development workflow</li>
-      </ul>
-    </div>
-  </div>
-</div>
+<section class="space-y-4">
+  <mdui-card class="p-4">
+    <h2 class="text-xl font-semibold">About Chronolens</h2>
+    <p class="mt-2 text-sm opacity-80">Upload a photo and transform it into different eras using AI. Built for hackathon fun — fast, simple, and privacy‑friendly.</p>
+  </mdui-card>
+
+  <mdui-card class="p-4 space-y-2">
+    <h3 class="font-semibold">Usage & Limits</h3>
+    <ul class="text-sm opacity-80 list-disc ml-6">
+      <li>Guest mode: up to 10 generations per day (automatic anonymous sign‑in).</li>
+      <li>Signed‑in: up to 25 generations per day.</li>
+      <li>Generations reset daily (San Francisco time).</li>
+    </ul>
+  </mdui-card>
+
+  <mdui-card class="p-4 space-y-2">
+    <h3 class="font-semibold">Tech Stack</h3>
+    <ul class="text-sm opacity-80 list-disc ml-6">
+      <li>Aurelia 2 + Vite + MDUI v2</li>
+      <li>Firebase: Auth (incl. anonymous), Firestore, Storage, Functions</li>
+      <li>Google GenAI for image editing</li>
+    </ul>
+  </mdui-card>
+</section>

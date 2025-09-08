@@ -276,6 +276,7 @@ export const getQuota = onCall(async (req) => {
 export const renderEra = onCall(async (req) => {
   const uid = assertAuth(req);
   const { sceneId, era, variant, idempotencyKey } = req.data || {};
+  const reroll = req?.data?.reroll === true;
   assertString(sceneId, "sceneId");
   assertString(era, "era");
   assertString(variant, "variant");
@@ -292,7 +293,7 @@ export const renderEra = onCall(async (req) => {
   const { ref, data } = await getSceneChecked(sceneId, uid);
 
   const outPath = joinPath("scenes", sceneId, "renders", eraVal, `${variantVal}.jpg`);
-  if (await fileExists(outPath)) {
+  if (!reroll && await fileExists(outPath)) {
     const gsUri = `gs://${bucket.name}/${outPath}`;
     const outputs = (data.outputs || {}) as SceneDoc["outputs"];
     const eraArr = outputs?.[eraVal] || [];

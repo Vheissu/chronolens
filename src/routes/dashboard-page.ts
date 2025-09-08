@@ -3,12 +3,14 @@ import { IRouter } from '@aurelia/router';
 import { AuthHook } from '../core/auth-hook';
 import { resolve } from 'aurelia';
 import { IScenes, type Era, type Variant } from '../services/scene-service';
+import { IQuota, type QuotaInfo } from '../services/quota-service';
 
 export class DashboardPage {
   static dependencies = [AuthHook];
-  private auth = resolve(IAuth);
+  public auth = resolve(IAuth);
   private get router() { return resolve(IRouter); }
   private scenes = resolve(IScenes);
+  private quotaSvc = resolve(IQuota);
 
   async canLoad(): Promise<boolean> {
     if (!this.auth.isLoggedIn) {
@@ -29,6 +31,12 @@ export class DashboardPage {
   sceneId: string | null = null;
   resultImage: string | null = null;
   error: string | null = null;
+  quota: QuotaInfo | null = null;
+  compare = 50; // before/after slider percent
+
+  async attaching() {
+    await this.refreshQuota();
+  }
 
   async onPickSource(ev: Event): Promise<void> {
     const input = ev.target as HTMLInputElement;
@@ -53,12 +61,45 @@ export class DashboardPage {
       // Render selected era/variant
       const { url } = await this.scenes.renderEra(this.sceneId, this.era, this.variant, this.negatives || undefined, this.stylePreset || undefined);
       this.resultImage = url;
+      await this.refreshQuota();
     } catch (e: unknown) {
       console.error(e);
       this.error = this.errMsg(e);
     } finally {
       this.busy = false;
     }
+  }
+
+  async reroll(): Promise<void> {
+    if (!this.sceneId) return;
+    this.busy = true; this.error = null;
+    try {
+      const { url } = await this.scenes.renderEra(this.sceneId, this.era, this.variant, this.negatives || undefined, this.stylePreset || undefined, true);
+      this.resultImage = url;
+      await this.refreshQuota();
+    } catch (e: unknown) {
+      console.error(e);
+      this.error = this.errMsg(e);
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  randomize(): void {
+    const eras: Era[] = ['1890','1920','1940','1970','1980','1990','2000','2010','2090'];
+    const variants: Variant[] = ['mild','balanced','cinematic'];
+    const styles = ['',
+      'Noir black-and-white with deep contrast',
+      'Faded postcard toning and soft vignette',
+      'VHS cassette artifacts and slight chroma bleed',
+      'Polaroid instant film look',
+      'Cyberpunk neon glow and reflective materials',
+      'Kodachrome film palette and grain',
+      'Sepia tone and paper texture',
+    ];
+    this.era = eras[Math.floor(Math.random()*eras.length)];
+    this.variant = variants[Math.floor(Math.random()*variants.length)];
+    this.stylePreset = styles[Math.floor(Math.random()*styles.length)];
   }
 
   downloadResult(): void {
@@ -82,5 +123,9 @@ export class DashboardPage {
   private errMsg(err: unknown): string {
     if (err instanceof Error && typeof err.message === 'string') return err.message;
     try { return String(err); } catch { return 'Failed to generate image'; }
+  }
+
+  private async refreshQuota(): Promise<void> {
+    try { this.quota = await this.quotaSvc.get(); } catch { /* ignore quota fetch */ }
   }
 }
