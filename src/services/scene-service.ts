@@ -62,10 +62,15 @@ export class SceneService {
     return { url, record };
   }
 
-  private gsUriToPath(gsUri: string): string {
+  gsUriToPath(gsUri: string): string {
     if (!gsUri.startsWith('gs://')) return gsUri;
     const firstSlash = gsUri.indexOf('/', 5);
     return firstSlash > 0 ? gsUri.slice(firstSlash + 1) : gsUri;
+  }
+
+  async urlFromGsUri(gsUri: string): Promise<string> {
+    const path = this.gsUriToPath(gsUri);
+    return getDownloadURL(storageRef(this.storage, path));
   }
 
   private readImageSize(file: File): Promise<{ width: number; height: number }>{

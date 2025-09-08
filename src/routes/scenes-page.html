@@ -1,0 +1,35 @@
+<section class="space-y-4">
+  <mdui-card class="p-4">
+    <h2 class="text-xl font-semibold flex items-center gap-2">
+      <mdui-icon name="collections"></mdui-icon>
+      Your Scenes
+    </h2>
+  </mdui-card>
+
+  <template if.bind="busy">
+    <div class="flex items-center gap-2 text-sm opacity-70">
+      <mdui-circular-progress indeterminate></mdui-circular-progress>
+      Loading…
+    </div>
+  </template>
+  <template if.bind="error">
+    <mdui-card class="p-3 text-red-600 text-sm">${error}</mdui-card>
+  </template>
+
+  <div class="grid gap-4 md:grid-cols-3">
+    <template repeat.for="s of items">
+      <mdui-card class="p-3 space-y-2">
+        <template if.bind="s.coverUrl">
+          <img class="rounded-md w-full" src.bind="s.coverUrl" alt="Scene preview"/>
+        </template>
+        <div class="text-sm font-semibold">${s.title || 'Untitled scene'}</div>
+        <div class="text-xs opacity-70" if.bind="s.createdAt?.toDate">${s.createdAt.toDate().toLocaleString?.() || ''}</div>
+      </mdui-card>
+    </template>
+  </div>
+
+  <template if.bind="!busy && !items.length">
+    <mdui-card class="p-4 text-sm opacity-70">No scenes yet. Generate one from the Dashboard.</mdui-card>
+  </template>
+</section>
+
