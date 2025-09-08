@@ -172,20 +172,16 @@ async function saveRender(
   contentType: "image/jpeg" | "image/png" = "image/jpeg",
   previewMaxWidth = 1600
 ): Promise<{ gsUri: string; width: number; height: number; sha256: string; previewGsUri: string }>{
-  // Compute sha256
   const hash = crypto.createHash("sha256").update(imageBuffer).digest("hex");
 
-  // Get image dimensions
   const meta = await sharp(imageBuffer).metadata();
   const width = meta.width || 0;
   const height = meta.height || 0;
 
-  // Paths
   const basePath = joinPath("scenes", sceneId, "renders", era, variant);
   const mainPath = `${basePath}.jpg`;
   const previewPath = `${basePath}.preview.jpg`;
 
-  // Write main with download token for client access
   const mainToken = crypto.randomUUID();
   await bucket.file(mainPath).save(imageBuffer, {
     contentType,
@@ -195,7 +191,6 @@ async function saveRender(
     metadata: { metadata: { firebaseStorageDownloadTokens: mainToken } },
   });
 
-  // Write preview (resize by width)
   const preview = await sharp(imageBuffer).resize({ width: previewMaxWidth, withoutEnlargement: true }).jpeg({ quality: 90 }).toBuffer();
   const previewToken = crypto.randomUUID();
   await bucket.file(previewPath).save(preview, {
@@ -369,7 +364,6 @@ export const publishScene = onCall(async (req) => {
     })
   );
 
-  // Public doc
   const publicId = `p_${sceneId.slice(0, 6)}_${Math.random().toString(36).slice(2, 8)}`;
   await db.collection("public").doc(publicId).set({
     sceneId,
@@ -385,7 +379,6 @@ export const publishScene = onCall(async (req) => {
   return { publicId };
 });
 
-// Simple health endpoint for smoke tests
 export const health = onRequest((_req, res) => {
   res.json({ status: "ok" });
 });
