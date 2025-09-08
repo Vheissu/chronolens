@@ -429,27 +429,43 @@ async function getSigned(path: string, filename: string, attachment: boolean): P
   return url;
 }
 
-function parseEraVariant(req: Request): { sceneId: string; era: Era; variant: Variant }{
+async function findOriginalPath(sceneId: string): Promise<string> {
+  const base = joinPath('scenes', sceneId);
+  for (const ext of ['jpg','jpeg','png','webp']) {
+    const p = joinPath(base, `original.${ext}`);
+    if (await fileExists(p)) return p;
+  }
+  throw new HttpsError('not-found', 'Original not found');
+}
+
+function parseScenePath(req: Request): { sceneId: string; isOriginal: boolean; era?: Era; variant?: Variant }{
   const parts = req.path.split('/').filter(Boolean);
-  // Expect: /api/(scene|download)/:sceneId/:era/:variant(.jpg)?
+  // Expect: /api/(scene|download)/:sceneId/(original.jpg | :era/:variant(.jpg))
   const sceneId = parts[2];
-  const era = (parts[3] || '') as Era;
+  const second = (parts[3] || '').toLowerCase();
+  if (!sceneId || !second) throw new HttpsError('invalid-argument', 'Invalid path');
+  if (second.startsWith('original')) {
+    return { sceneId, isOriginal: true };
+  }
+  const era = second as Era;
   const variant = ((parts[4] || '').replace(/\.jpg$/i, '')) as Variant;
-  if (!sceneId || !era || !variant) throw new HttpsError('invalid-argument', 'Invalid path');
-  return { sceneId, era, variant };
+  if (!era || !variant) throw new HttpsError('invalid-argument', 'Invalid path');
+  return { sceneId, isOriginal: false, era, variant };
 }
 
 export const serveRender = onRequest(async (req: Request, res: Response) => {
   try {
-    const { sceneId, era, variant } = parseEraVariant(req);
+    const parsed = parseScenePath(req);
+    const { sceneId } = parsed;
     const uid = (req as any).auth?.uid || null; // will be undefined unless behind callable/identity proxy
     const ref = db.collection('scenes').doc(sceneId);
     const snap = await ref.get();
     if (!snap.exists) throw new HttpsError('not-found', 'Scene not found');
     const scene = snap.data() as SceneDoc;
     assertAccess(scene, uid);
-    const p = await outputPathFor(sceneId, era, variant);
-    const url = await getSigned(p, `${sceneId}-${era}-${variant}.jpg`, false);
+    const p = parsed.isOriginal ? await findOriginalPath(sceneId) : await outputPathFor(sceneId, parsed.era as Era, parsed.variant as Variant);
+    const filename = parsed.isOriginal ? `${sceneId}-original.jpg` : `${sceneId}-${parsed.era}-${parsed.variant}.jpg`;
+    const url = await getSigned(p, filename, false);
     res.set('Cache-Control', 'private, max-age=60');
     res.set('X-Robots-Tag', 'noimageindex');
     res.redirect(302, url);
@@ -461,15 +477,17 @@ export const serveRender = onRequest(async (req: Request, res: Response) => {
 
 export const downloadRender = onRequest(async (req: Request, res: Response) => {
   try {
-    const { sceneId, era, variant } = parseEraVariant(req);
+    const parsed = parseScenePath(req);
+    const { sceneId } = parsed;
     const ref = db.collection('scenes').doc(sceneId);
     const snap = await ref.get();
     if (!snap.exists) throw new HttpsError('not-found', 'Scene not found');
     const scene = snap.data() as SceneDoc;
     // Only owner or published scenes can be downloaded
     assertAccess(scene, (req as any).auth?.uid || null);
-    const p = await outputPathFor(sceneId, era, variant);
-    const filename = (req.query?.filename as string) || `chronolens-${sceneId}-${era}-${variant}.jpg`;
+    const p = parsed.isOriginal ? await findOriginalPath(sceneId) : await outputPathFor(sceneId, parsed.era as Era, parsed.variant as Variant);
+    const defName = parsed.isOriginal ? `chronolens-${sceneId}-original.jpg` : `chronolens-${sceneId}-${parsed.era}-${parsed.variant}.jpg`;
+    const filename = (req.query?.filename as string) || defName;
     const url = await getSigned(p, filename, true);
     res.set('Cache-Control', 'private, max-age=60');
     res.set('X-Robots-Tag', 'noimageindex');

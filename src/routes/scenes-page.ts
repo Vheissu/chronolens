@@ -4,7 +4,7 @@ import { collection, getDocs, query, where, orderBy, limit, type DocumentData } 
 import { auth, db } from '../core/firebase';
 
 type Output = { variant: Variant; gsUri: string; width?: number; height?: number; sha256?: string };
-type SceneItem = { id: string; title?: string | null; createdAt?: unknown; outputs?: Partial<Record<Era, Output[]>>; coverUrl?: string };
+type SceneItem = { id: string; title?: string | null; createdAt?: unknown; outputs?: Partial<Record<Era, Output[]>>; coverEra?: Era; coverVariant?: Variant };
 
 export class ScenesPage {
   private scenes = resolve(IScenes);
@@ -28,18 +28,16 @@ export class ScenesPage {
       const out: SceneItem[] = [];
       for (const r of raw) {
         const outputs = (r.outputs || {}) as SceneItem['outputs'];
-        let coverGs: string | null = null;
+        let coverEra: Era | undefined;
+        let coverVariant: Variant | undefined;
         if (outputs) {
-          for (const era of ['1920','1970','2090'] as Era[]) {
-            const arr = (outputs as Record<string, Output[]>)[era] as Output[] | undefined;
-            if (arr && arr.length) { coverGs = (arr.find(x => x.variant === 'balanced') || arr[0]).gsUri; break; }
+          const eras: Era[] = ['1890','1920','1940','1970','1980','1990','2000','2010','2090'];
+          for (const e of eras) {
+            const arr = (outputs as Record<string, Output[]>)[e] as Output[] | undefined;
+            if (arr && arr.length) { const c = arr.find(x => x.variant === 'balanced') || arr[0]; coverEra = e; coverVariant = c.variant; break; }
           }
         }
-        let coverUrl: string | undefined;
-        if (coverGs) {
-          try { coverUrl = await this.scenes.urlFromGsUri(coverGs); } catch { /* ignore */ }
-        }
-        out.push({ id: r.id, title: r.title || null, createdAt: r.createdAt, outputs, coverUrl });
+        out.push({ id: r.id, title: r.title || null, createdAt: r.createdAt, outputs, coverEra, coverVariant });
       }
       this.items = out;
     } catch (e) {
