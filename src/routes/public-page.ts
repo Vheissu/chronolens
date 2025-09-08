@@ -20,9 +20,12 @@ export class PublicPage {
       const data = snap.data() as { coverRef?: string; coverEra?: string; coverVariant?: string; sceneId?: string };
       if (data?.sceneId && data?.coverEra && data?.coverVariant) {
         this.coverUrl = `/api/scene/${data.sceneId}/${data.coverEra}/${data.coverVariant}.jpg`;
-      } else if (data?.coverRef && data?.sceneId) {
-        // Fallback for older published docs: try to show with original gsUri method
-        try { this.coverUrl = await this.scenes.urlFromGsUri(data.coverRef); } catch { /* ignore */ }
+      } else if (data?.sceneId && data?.coverRef) {
+        // Fallback for older published docs: support gs:// and https storage URLs; fall back to original by id
+        try { this.coverUrl = await this.scenes.urlFromGsUri(data.coverRef, data.sceneId); } catch { this.coverUrl = await this.scenes.originalUrl(data.sceneId); }
+      } else if (data?.sceneId) {
+        // As a last resort, try original by id
+        this.coverUrl = await this.scenes.originalUrl(data.sceneId);
       }
     } catch (e) {
       this.error = e instanceof Error ? e.message : 'Failed to load';

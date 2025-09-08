@@ -70,9 +70,34 @@ export class SceneService {
     return firstSlash > 0 ? gsUri.slice(firstSlash + 1) : gsUri;
   }
 
-  async urlFromGsUri(gsUri: string): Promise<string> {
+  async urlFromGsUri(gsUri: string, fallbackSceneId?: string): Promise<string> {
     try {
-      const path = this.gsUriToPath(gsUri); // scenes/:sceneId/...
+      let path = '';
+      if (gsUri.startsWith('gs://')) {
+        path = this.gsUriToPath(gsUri); // scenes/:sceneId/...
+      } else if (gsUri.startsWith('http')) {
+        // Support Firebase Storage download URLs
+        // Formats:
+        // - https://firebasestorage.googleapis.com/v0/b/<bucket>/o/<objectPath>?...
+        // - https://storage.googleapis.com/<bucket>/<objectPath>
+        try {
+          const url = new URL(gsUri);
+          const p = url.pathname;
+          if (p.includes('/o/')) {
+            const idx = p.indexOf('/o/');
+            path = decodeURIComponent(p.slice(idx + 3));
+          } else {
+            // Expected: /<bucket>/<objectPath>
+            const parts = p.split('/').filter(Boolean);
+            if (parts.length >= 2) {
+              path = parts.slice(1).join('/');
+            }
+          }
+        } catch { /* ignore */ }
+      } else {
+        path = gsUri;
+      }
+
       const parts = path.split('/');
       if (parts.length >= 4 && parts[0] === 'scenes') {
         const sceneId = parts[1];
@@ -87,6 +112,9 @@ export class SceneService {
         }
       }
     } catch { /* ignore */ }
+    if (fallbackSceneId) {
+      return this.originalUrl(fallbackSceneId);
+    }
     // Fallback to original path if parsing fails (ensures no Storage call)
     return '/api/scene/unknown/original.jpg';
   }
