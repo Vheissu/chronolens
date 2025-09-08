@@ -1,9 +1,8 @@
 import { IAuth } from '../services/auth-service';
-import { DI } from '@aurelia/kernel';
+import { resolve } from 'aurelia';
 
 export class LoginPage {
-  static inject = [IAuth as unknown as DI.InterfaceSymbol<IAuth>];
-  constructor(public auth: IAuth) {}
+  public auth = resolve(IAuth);
 
   email = '';
   password = '';
@@ -27,4 +26,3 @@ export class LoginPage {
     }
   }
 }
-

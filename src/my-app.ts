@@ -1,6 +1,6 @@
 import { route } from '@aurelia/router';
 import { IAuth } from './services/auth-service';
-import { DI } from '@aurelia/kernel';
+import { resolve } from 'aurelia';
 
 @route({
   routes: [
@@ -13,6 +13,5 @@ import { DI } from '@aurelia/kernel';
   fallback: () => import('./missing-page'),
 })
 export class MyApp {
-  static inject = [IAuth as unknown as DI.InterfaceSymbol<IAuth>];
-  constructor(public auth: IAuth) {}
+  public auth = resolve(IAuth);
 }

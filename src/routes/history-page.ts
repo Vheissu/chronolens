@@ -1,9 +1,8 @@
 import { IHistory, type GenerationRecord } from '../services/history-service';
-import { DI } from '@aurelia/kernel';
+import { resolve } from 'aurelia';
 
 export class HistoryPage {
-  static inject = [IHistory as unknown as DI.InterfaceSymbol<IHistory>];
-  constructor(private history: IHistory) {}
+  private history = resolve(IHistory);
 
   items: GenerationRecord[] = [];
   unsub: (() => void) | null = null;
@@ -13,4 +12,3 @@ export class HistoryPage {
   }
   detaching() { try { this.unsub?.(); } catch { /* ignore */ } }
 }
-

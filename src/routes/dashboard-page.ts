@@ -1,14 +1,16 @@
 import { IAuth } from '../services/auth-service';
-import { DI } from '@aurelia/kernel';
 import { IRouter } from '@aurelia/router';
 import { AuthHook } from '../core/auth-hook';
 import { IGemini } from '../services/gemini-service';
 import { IHistory } from '../services/history-service';
+import { resolve } from 'aurelia';
 
 export class DashboardPage {
   static dependencies = [AuthHook];
-  static inject = [IAuth as unknown as DI.InterfaceSymbol<IAuth>, IRouter, IGemini as unknown as DI.InterfaceSymbol<IGemini>, IHistory as unknown as DI.InterfaceSymbol<IHistory>];
-  constructor(private auth: IAuth, private router: IRouter, private gemini: IGemini, private history: IHistory) {}
+  private auth = resolve(IAuth);
+  private router = resolve(IRouter);
+  private gemini = resolve(IGemini);
+  private history = resolve(IHistory);
 
   async canLoad(): Promise<boolean> {
     if (!this.auth.isLoggedIn) {
