@@ -4,7 +4,7 @@ import { collection, getDocs, query, where, orderBy, limit, type DocumentData } 
 import { auth, db } from '../core/firebase';
 
 type Output = { variant: Variant; gsUri: string; width?: number; height?: number; sha256?: string };
-type SceneItem = { id: string; title?: string | null; createdAt?: unknown; outputs?: Partial<Record<Era, Output[]>>; coverEra?: Era; coverVariant?: Variant };
+type SceneItem = { id: string; title?: string | null; createdAt?: unknown; outputs?: Partial<Record<Era, Output[]>>; coverEra?: Era; coverVariant?: Variant; coverUrl?: string };
 
 export class ScenesPage {
   private scenes = resolve(IScenes);
@@ -37,7 +37,11 @@ export class ScenesPage {
             if (arr && arr.length) { const c = arr.find(x => x.variant === 'balanced') || arr[0]; coverEra = e; coverVariant = c.variant; break; }
           }
         }
-        out.push({ id: r.id, title: r.title || null, createdAt: r.createdAt, outputs, coverEra, coverVariant });
+        let coverUrl: string | undefined;
+        if (coverEra && coverVariant) {
+          try { coverUrl = await this.scenes.renderUrl(r.id, coverEra, coverVariant); } catch { /* ignore */ }
+        }
+        out.push({ id: r.id, title: r.title || null, createdAt: r.createdAt, outputs, coverEra, coverVariant, coverUrl });
       }
       this.items = out;
     } catch (e) {

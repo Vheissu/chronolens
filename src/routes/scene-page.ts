@@ -36,7 +36,7 @@ export class ScenePage {
       if (!this.scene) { this.error = 'Scene not found'; return; }
       const original = (this.scene?.original as { gsUri?: string } | undefined);
       if (original?.gsUri) {
-        this.originalUrl = `/api/scene/${this.sceneId}/original.jpg`;
+        this.originalUrl = await this.scenes.originalUrl(this.sceneId);
       }
       // Default era from doc if present
       const eras: Era[] = this.scene?.eras || ['1890','1920','1940','1970','1980','1990','2000','2010','2090'];
@@ -53,7 +53,7 @@ export class ScenePage {
     const outputs = ((this.scene?.outputs as Record<string, Output[]> | undefined)?.[this.selectedEra] || []) as Output[];
     const found = outputs.find(o => o.variant === this.selectedVariant) || outputs[0];
     if (found) {
-      this.resultUrl = `/api/scene/${this.sceneId}/${this.selectedEra}/${this.selectedVariant}.jpg?ts=${Date.now()}`;
+      this.resultUrl = await this.scenes.renderUrl(this.sceneId, this.selectedEra, this.selectedVariant);
     } else {
       this.resultUrl = null;
     }
@@ -62,7 +62,7 @@ export class ScenePage {
   async generate(): Promise<void> {
     try {
       await this.scenes.renderEra(this.sceneId, this.selectedEra, this.selectedVariant, this.negatives || undefined, this.stylePreset || undefined);
-      this.resultUrl = `/api/scene/${this.sceneId}/${this.selectedEra}/${this.selectedVariant}.jpg?ts=${Date.now()}`;
+      this.resultUrl = await this.scenes.renderUrl(this.sceneId, this.selectedEra, this.selectedVariant);
       await this.refresh();
     } catch (e) {
       this.error = e instanceof Error ? e.message : 'Failed to render era';
@@ -72,7 +72,7 @@ export class ScenePage {
   async reroll(): Promise<void> {
     try {
       await this.scenes.renderEra(this.sceneId, this.selectedEra, this.selectedVariant, this.negatives || undefined, this.stylePreset || undefined, true);
-      this.resultUrl = `/api/scene/${this.sceneId}/${this.selectedEra}/${this.selectedVariant}.jpg?ts=${Date.now()}`;
+      this.resultUrl = await this.scenes.renderUrl(this.sceneId, this.selectedEra, this.selectedVariant);
       await this.refresh();
     } catch (e) {
       this.error = e instanceof Error ? e.message : 'Failed to render era';

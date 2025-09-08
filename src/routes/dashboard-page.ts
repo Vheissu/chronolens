@@ -110,12 +110,12 @@ export class DashboardPage {
     this.stylePreset = styles[Math.floor(Math.random()*styles.length)];
   }
 
-  downloadResult(): void {
+  async downloadResult(): Promise<void> {
     if (!this.sceneId) return;
     const era = this.era;
     const variant = this.variant;
     const filename = `chronolens-${this.sceneId}-${era}-${variant}.jpg`;
-    const url = `/api/download/${this.sceneId}/${era}/${variant}.jpg?filename=${encodeURIComponent(filename)}`;
+    const url = await this.scenes.downloadUrl(this.sceneId, era, variant, filename);
     window.open(url, '_blank');
   }
 

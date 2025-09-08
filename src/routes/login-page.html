@@ -1,4 +1,4 @@
-<mdui-card class="max-w-md mx-auto p-6 space-y-4">
+<mdui-card class="glass max-w-md mx-auto p-6 space-y-4">
   <h2 class="text-2xl font-semibold">${mode === 'sign-in' ? 'Sign In' : 'Create Account'}</h2>
 
   <template if.bind="error">
@@ -17,10 +17,9 @@
     </mdui-button>
   </div>
 
-  <div class="text-sm text-gray-600">
+  <div class="text-sm opacity-80">
     <a href="#" click.trigger="mode = mode === 'sign-in' ? 'register' : 'sign-in'">
       ${mode === 'sign-in' ? 'Need an account? Register' : 'Already have an account? Sign in'}
     </a>
   </div>
 </mdui-card>
-

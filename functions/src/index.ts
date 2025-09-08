@@ -496,7 +496,12 @@ export const serveRender = onRequest(async (req: Request, res: Response) => {
   try {
     const parsed = parseScenePath(req);
     const { sceneId } = parsed;
-    const uid = (req as any).auth?.uid || null; // will be undefined unless behind callable/identity proxy
+    // Support token query param for browser <img> auth
+    let uid: string | null = null;
+    try {
+      const qtoken = (req.query?.token as string) || '';
+      if (qtoken) { const dec = await getAdminAuth().verifyIdToken(qtoken); uid = dec.uid || null; }
+    } catch { /* ignore */ }
     const ref = db.collection('scenes').doc(sceneId);
     const snap = await ref.get();
     if (!snap.exists) throw new HttpsError('not-found', 'Scene not found');
@@ -523,7 +528,12 @@ export const downloadRender = onRequest(async (req: Request, res: Response) => {
     if (!snap.exists) throw new HttpsError('not-found', 'Scene not found');
     const scene = snap.data() as SceneDoc;
     // Only owner or published scenes can be downloaded
-    assertAccess(scene, (req as any).auth?.uid || null);
+    let uid: string | null = null;
+    try {
+      const qtoken = (req.query?.token as string) || '';
+      if (qtoken) { const dec = await getAdminAuth().verifyIdToken(qtoken); uid = dec.uid || null; }
+    } catch { /* ignore */ }
+    assertAccess(scene, uid);
     const p = parsed.isOriginal ? await findOriginalPath(sceneId) : await outputPathFor(sceneId, parsed.era as Era, parsed.variant as Variant);
     const defName = parsed.isOriginal ? `chronolens-${sceneId}-original.jpg` : `chronolens-${sceneId}-${parsed.era}-${parsed.variant}.jpg`;
     const filename = (req.query?.filename as string) || defName;

@@ -5,6 +5,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getStorage } from 'firebase/storage';
 import { resolve } from 'aurelia';
 import { IHttp } from './http-client';
+import { IAuth } from './auth-service';
 import { auth, db } from '../core/firebase';
 
 export type Era = '1890' | '1920' | '1940' | '1970' | '1980' | '1990' | '2000' | '2010' | '2090';
@@ -19,6 +20,7 @@ export class SceneService {
   private storage = getStorage();
   private functions = getFunctions(undefined, 'us-central1');
   private http = resolve(IHttp);
+  private auth = resolve(IAuth);
 
   async createScene(eras: Era[] = ['1920', '1970', '2090'], title?: string): Promise<string> {
     const uid = auth.currentUser?.uid;
@@ -58,7 +60,7 @@ export class SceneService {
     type RenderEraInput = { sceneId: string; era: Era; variant: Variant; negatives?: string; style?: string; reroll?: boolean };
     const callable = httpsCallable<RenderEraInput, RenderRecord>(this.functions, 'renderEra');
     const record = await callable({ sceneId, era, variant, negatives, style, reroll }).then(r => r.data);
-    const url = `/api/scene/${sceneId}/${era}/${variant}.jpg?ts=${Date.now()}`;
+    const url = await this.renderUrl(sceneId, era, variant);
     return { url, record };
   }
 
@@ -78,15 +80,43 @@ export class SceneService {
           const era = parts[3];
           const variantWithExt = parts[4];
           const variant = variantWithExt.replace(/\.jpg$/i, '') as Variant;
-          return `/api/scene/${sceneId}/${era}/${variant}.jpg`;
+          return this.renderUrl(sceneId, era as Era, variant);
         }
         if (parts[2].startsWith('original')) {
-          return `/api/scene/${sceneId}/original.jpg`;
+          return this.originalUrl(sceneId);
         }
       }
     } catch { /* ignore */ }
     // Fallback to original path if parsing fails (ensures no Storage call)
     return '/api/scene/unknown/original.jpg';
+  }
+
+  private async authQuery(): Promise<string> {
+    try {
+      const tok = await this.auth.getToken();
+      if (tok?.token) return `token=${encodeURIComponent(tok.token)}`;
+    } catch { /* ignore */ }
+    return '';
+  }
+
+  async originalUrl(sceneId: string): Promise<string> {
+    const q = await this.authQuery();
+    const ts = `ts=${Date.now()}`;
+    const qp = [q, ts].filter(Boolean).join('&');
+    return `/api/scene/${sceneId}/original.jpg${qp ? '?' + qp : ''}`;
+  }
+
+  async renderUrl(sceneId: string, era: Era, variant: Variant): Promise<string> {
+    const q = await this.authQuery();
+    const ts = `ts=${Date.now()}`;
+    const qp = [q, ts].filter(Boolean).join('&');
+    return `/api/scene/${sceneId}/${era}/${variant}.jpg${qp ? '?' + qp : ''}`;
+  }
+
+  async downloadUrl(sceneId: string, era: Era, variant: Variant, filename: string): Promise<string> {
+    const q = await this.authQuery();
+    const qp = [q, `filename=${encodeURIComponent(filename)}`].filter(Boolean).join('&');
+    return `/api/download/${sceneId}/${era}/${variant}.jpg${qp ? '?' + qp : ''}`;
   }
 
   async getScene(sceneId: string): Promise<Record<string, unknown> | null> {

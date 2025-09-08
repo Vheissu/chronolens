@@ -1,5 +1,5 @@
 <section class="grid gap-4 md:grid-cols-3">
-  <mdui-card class="p-4 md:col-span-2 space-y-3">
+  <mdui-card class="glass p-5 md:col-span-2 space-y-4">
     <h2 class="text-xl font-semibold flex items-center gap-2">
       <mdui-icon name="tune"></mdui-icon>
       Generate
@@ -8,9 +8,14 @@
     <div class="grid gap-3 md:grid-cols-2">
       <div class="space-y-2">
         <div class="text-sm opacity-70">Upload photo</div>
-        <input type="file" accept="image/jpeg,image/png,image/webp" change.trigger="onPickSource($event)"/>
+        <label class="dropzone cursor-pointer">
+          <mdui-icon name="upload" class="opacity-80"></mdui-icon>
+          <div class="text-sm">Drag & drop or click to upload</div>
+          <div class="text-xs opacity-60">JPEG, PNG, or WebP up to 5 MB</div>
+          <input class="sr-only" type="file" accept="image/jpeg,image/png,image/webp" change.trigger="onPickSource($event)" />
+        </label>
         <template if.bind="sourcePreview">
-          <img class="rounded-lg max-h-48" src.bind="sourcePreview" alt="Source preview"/>
+          <img class="rounded-lg max-h-56 ring-1 ring-black/5" src.bind="sourcePreview" alt="Source preview"/>
         </template>
       </div>
 
@@ -68,13 +73,13 @@
     </div>
   </mdui-card>
 
-  <mdui-card class="p-4 space-y-3">
+  <mdui-card class="glass p-5 space-y-4">
     <h3 class="text-lg font-semibold flex items-center gap-2">
       <mdui-icon name="image"></mdui-icon>
       Result
     </h3>
     <template if.bind="resultImage">
-      <div class="relative w-full max-w-full overflow-hidden rounded-lg border">
+      <div class="relative w-full max-w-full overflow-hidden rounded-xl checker ring-1 ring-black/5">
         <img class="block w-full" src.bind="sourcePreview || ''" alt="Original"/>
         <div class="absolute inset-0 pointer-events-none overflow-hidden" style.bind="'width: ' + compare + '%'">
           <img class="w-full h-full object-contain" src.bind="resultImage" alt="Result"/>

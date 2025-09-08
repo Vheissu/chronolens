@@ -1,5 +1,5 @@
 <section class="space-y-4">
-  <mdui-card class="p-4">
+  <mdui-card class="glass p-4">
     <h2 class="text-xl font-semibold flex items-center gap-2">
       <mdui-icon name="collections"></mdui-icon>
       Your Scenes
@@ -18,9 +18,9 @@
 
   <div class="grid gap-4 md:grid-cols-3">
     <template repeat.for="s of items">
-      <mdui-card class="p-3 space-y-2" href.bind="'/scene/' + s.id" clickable="true">
-        <template if.bind="s.coverEra && s.coverVariant">
-          <img class="rounded-md w-full" src.bind="('/api/scene/' + s.id + '/' + s.coverEra + '/' + s.coverVariant + '.jpg')" alt="Scene preview"/>
+      <mdui-card class="glass p-3 space-y-2 hover:shadow-lg transition-shadow" href.bind="'/scene/' + s.id" clickable="true">
+        <template if.bind="s.coverUrl">
+          <img class="rounded-md w-full ring-1 ring-black/5" src.bind="s.coverUrl" alt="Scene preview"/>
         </template>
         <div class="text-sm font-semibold">${s.title || 'Untitled scene'}</div>
         <div class="text-xs opacity-70" if.bind="s.createdAt?.toDate">${s.createdAt.toDate().toLocaleString?.() || ''}</div>
@@ -29,6 +29,6 @@
   </div>
 
   <template if.bind="!busy && !items.length">
-    <mdui-card class="p-4 text-sm opacity-70">No scenes yet. Generate one from the Dashboard.</mdui-card>
+    <mdui-card class="glass p-4 text-sm opacity-70">No scenes yet. Generate one from the Dashboard.</mdui-card>
   </template>
 </section>

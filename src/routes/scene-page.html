@@ -1,5 +1,5 @@
 <section class="space-y-4">
-  <mdui-card class="p-4 flex items-center justify-between">
+  <mdui-card class="glass p-4 flex items-center justify-between">
     <div class="text-xl font-semibold">Scene</div>
     <div class="flex items-center gap-2">
       <mdui-button variant="tonal" icon="ios_share" click.trigger="publish()" disabled.bind="publishing">${publishing ? 'Publishing…' : 'Publish'}</mdui-button>
@@ -9,7 +9,7 @@
     </div>
   </mdui-card>
 
-  <mdui-card class="p-4 space-y-3">
+  <mdui-card class="glass p-4 space-y-3">
     <div class="grid gap-2 md:grid-cols-3 items-end">
       <mdui-select label="Era" value.two-way="selectedEra" change.trigger="selectExisting()">
         <mdui-menu-item value="1890">1890</mdui-menu-item>
@@ -34,13 +34,13 @@
     </div>
   </mdui-card>
 
-  <mdui-card class="p-4 space-y-3">
+  <mdui-card class="glass p-4 space-y-3">
     <h3 class="text-lg font-semibold flex items-center gap-2">
       <mdui-icon name="compare"></mdui-icon>
       Before / After
     </h3>
     <template if.bind="originalUrl || resultUrl">
-      <div class="relative w-full max-w-full overflow-hidden rounded-lg border">
+      <div class="relative w-full max-w-full overflow-hidden rounded-xl checker ring-1 ring-black/5">
         <img class="block w-full" src.bind="originalUrl || ''" alt="Original"/>
         <div class="absolute inset-0 pointer-events-none overflow-hidden" style.bind="'width: ' + compare + '%'">
           <img class="w-full h-full object-contain" src.bind="resultUrl || ''" alt="Result"/>
@@ -59,4 +59,3 @@
     </template>
   </mdui-card>
 </section>
-
